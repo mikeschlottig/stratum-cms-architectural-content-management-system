@@ -1,9 +1,38 @@
 import { Hono } from "hono";
-import type { Env } from './core-utils';
-import { UserEntity, ChatBoardEntity } from "./entities";
+import type { Env } from './core-utils';import { UserEntity, ChatBoardEntity } from "./entities";
 import { ok, bad, notFound, isStr } from './core-utils';
-
+import { ContentTypeEntity } from "./cms-entities";
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
+  // CONTENT TYPES (SCHEMAS)
+  app.get('/api/types', async (c) => {
+    await ContentTypeEntity.ensureSeed(c.env);
+    const page = await ContentTypeEntity.list(c.env, c.req.query('cursor') ?? null);
+    return ok(c, page);
+  });
+
+  app.get('/api/types/:id', async (c) => {
+    const entity = new ContentTypeEntity(c.env, c.req.param('id'));
+    if (!(await entity.exists())) return notFound(c, 'Content type not found');
+    return ok(c, await entity.getState());
+  });
+
+  app.post('/api/types', async (c) => {
+    const body = await c.req.json();
+    if (!body.name || !body.slug) return bad(c, 'Name and slug required');
+    const type = {
+      ...body,
+      id: body.id || body.slug,
+      updatedAt: Date.now()
+    };
+    await ContentTypeEntity.create(c.env, type);
+    return ok(c, type);
+  });
+
+  app.delete('/api/types/:id', async (c) => {
+    const deleted = await ContentTypeEntity.delete(c.env, c.req.param('id'));
+    return ok(c, { deleted });
+  });
+
   app.get('/api/test', (c) => c.json({ success: true, data: { name: 'CF Workers Demo' }}));
 
   // USERS

@@ -1,72 +1,103 @@
-/* This is a demo sidebar. **COMPULSORY** Edit this file to customize the sidebar OR remove it from appLayout OR don't use appLayout at all */
 import React from "react";
-import { Home, Layers, Compass, Star, Settings, LifeBuoy } from "lucide-react";
+import { LayoutDashboard, Database, Settings, Image as ImageIcon, Plus, Box, ChevronRight } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
+import type { ContentType } from "@/types/schema";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarHeader,
-  SidebarSeparator,
-  SidebarInput,
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarMenuAction,
-  SidebarMenuBadge,
 } from "@/components/ui/sidebar";
-
 export function AppSidebar(): JSX.Element {
+  const location = useLocation();
+  const { data: types } = useQuery({
+    queryKey: ["content-types"],
+    queryFn: () => api<{ items: ContentType[] }>("/api/types"),
+  });
+  const isActive = (path: string) => location.pathname === path;
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1">
-          <div className="h-6 w-6 rounded-md bg-gradient-to-br from-indigo-500 to-purple-500" />
-          <span className="text-sm font-medium">Demo Sidebar</span>
+    <Sidebar variant="inset" className="border-r border-border/40">
+      <SidebarHeader className="p-4">
+        <div className="flex items-center gap-2 px-1">
+          <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/20">
+            S
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-bold leading-none">Stratum</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">CMS Engine</span>
+          </div>
         </div>
-        <SidebarInput placeholder="Search" />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive>
-                <a href="#"><Home /> <span>Home</span></a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="#"><Layers /> <span>Projects</span></a>
-              </SidebarMenuButton>
-              <SidebarMenuAction>
-                <Star className="size-4" />
-              </SidebarMenuAction>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="#"><Compass /> <span>Explore</span></a>
+              <SidebarMenuButton asChild isActive={isActive("/")} tooltip="Dashboard">
+                <Link to="/">
+                  <LayoutDashboard className="size-4" />
+                  <span>Dashboard</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
-
-        <SidebarSeparator />
-
         <SidebarGroup>
-          <SidebarGroupLabel>Quick Links</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground/70">Content</SidebarGroupLabel>
+          <SidebarMenu>
+            {types?.items?.map((type) => (
+              <SidebarMenuItem key={type.id}>
+                <SidebarMenuButton asChild isActive={isActive(`/content/${type.id}`)}>
+                  <Link to={`/content/${type.id}`}>
+                    <Box className="size-4" />
+                    <span>{type.name}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+            {(!types || types.items.length === 0) && (
+              <div className="px-4 py-2 text-xs text-muted-foreground italic">No models defined</div>
+            )}
+          </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground/70">Management</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="#"><Star /> <span>Starred</span></a>
-              </SidebarMenuButton>
-              <SidebarMenuBadge>5</SidebarMenuBadge>
-            </SidebarMenuItem>
-          </SidebarMenu>
+              <SidebarMenuButton asChild isActive={isActive("/schema")}>
+                <Link to="/schema">
+                  <Database className="size-4" />
+                  <span>Schema Architect</span>
+                </Link>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/media")}>
+                  <Link to="/media">
+                    <ImageIcon className="size-4" />
+                    <span>Asset Library</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <div className="px-2 text-xs text-muted-foreground">A simple shadcn sidebar</div>
+      <SidebarFooter className="p-4 border-t border-border/40">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isActive("/settings")}>
+              <Link to="/settings">
+                <Settings className="size-4" />
+                <span>Global Settings</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );

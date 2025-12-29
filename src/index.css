@@ -1,7 +1,32 @@
-@tailwind base;
-@tailwind components;
+@tailwind base;@tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .obsidian-card {
+    @apply bg-zinc-950 border border-zinc-800/50 shadow-lg backdrop-blur-sm;
+  }
+
+  .glass-panel {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2.5s infinite linear;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
 @layer base {
   :root {
     /* Core Colors */
