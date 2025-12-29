@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
+import { GlobalCommand } from '@/components/GlobalCommand';
 type AppLayoutProps = {
   children: React.ReactNode;
   container?: boolean;
@@ -42,6 +43,7 @@ export function AppLayout({ children, container = true, className, title }: AppL
             children
           )}
         </main>
+        <GlobalCommand />
       </SidebarInset>
     </SidebarProvider>
   );

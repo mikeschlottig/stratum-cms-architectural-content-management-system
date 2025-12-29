@@ -5,13 +5,18 @@ import { LayoutDashboard, Database, Settings, Image as ImageIcon, Plus, Box, Sea
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import type { ContentType } from "@/types/schema";
-import { useDebounce } from "react-use";
+
 export function GlobalCommand() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const navigate = useNavigate();
-  useDebounce(() => setDebouncedQuery(query), 300, [query]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
   const { data: types } = useQuery({
     queryKey: ["content-types"],
     queryFn: () => api<{ items: ContentType[] }>("/api/types"),
@@ -44,11 +49,11 @@ export function GlobalCommand() {
       />
       <CommandList className="max-h-[400px]">
         <CommandEmpty>No results found for "{query}".</CommandEmpty>
-        {searchResults?.items && searchResults.items.length > 0 && (
+        {searchResults?.items && (searchResults.items ?? []).length > 0 && (
           <CommandGroup heading="Content Results">
-            {searchResults.items.map((item) => (
-              <CommandItem 
-                key={item.id} 
+            {(searchResults.items ?? []).map((item) => (
+              <CommandItem
+                key={item.id}
                 onSelect={() => runCommand(() => navigate(`/content/${item.typeId}/edit/${item.id}`))}
                 className="flex items-center gap-2"
               >
@@ -82,7 +87,7 @@ export function GlobalCommand() {
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading="Content Models">
-          {types?.items?.map((type) => (
+          {(types?.items ?? []).map((type) => (
             <CommandItem key={type.id} onSelect={() => runCommand(() => navigate(`/content/${type.id}`))}>
               <Box className="mr-2 h-4 w-4" />
               <span>{type.name}</span>

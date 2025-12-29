@@ -3,7 +3,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Database, Users, Box, TrendingUp, Clock, FileText } from 'lucide-react';
-import { GlobalCommand } from '@/components/GlobalCommand';
+
 const MOCK_STATS = [
   { label: 'Total Objects', value: '1,284', icon: Box, color: 'text-indigo-500' },
   { label: 'Content Types', value: '12', icon: Database, color: 'text-emerald-500' },
@@ -22,7 +22,6 @@ const MOCK_CHART_DATA = [
 export function HomePage() {
   return (
     <AppLayout title="Mission Control">
-      <GlobalCommand />
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {MOCK_STATS.map((stat, i) => (
