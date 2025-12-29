@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Save, Loader2, FileText, Database, AlertCircle } from "lucide-react";
+import { ChevronLeft, Save, Loader2, FileText, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import type { ContentType, ContentItem } from "@/types/schema";
@@ -48,32 +48,23 @@ export function EditorStudio() {
   const saveMutation = useMutation({
     mutationFn: (values: any) => api(`/api/content/${typeId}`, {
       method: "POST",
-      body: JSON.stringify({
-        id: id,
-        ...values,
-      }),
+      body: JSON.stringify({ id, ...values }),
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["content-items", typeId] });
-      toast.success(isEditing ? "Entry updated" : "Entry created");
+      toast.success(isEditing ? "Entry Updated" : "Entry Published");
       navigate(`/content/${typeId}`);
     },
     onError: (err: any) => toast.error(`Save failed: ${err.message}`),
   });
   if (schemaLoading || (isEditing && itemLoading)) {
     return (
-      <AppLayout title="Loading Studio...">
-        <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <div className="space-y-2">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-4 w-32" />
-            </div>
-          </div>
+      <AppLayout title="Studio Loading...">
+        <div className="space-y-8">
+          <Skeleton className="h-12 w-3/4" />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <Skeleton className="lg:col-span-2 h-[400px] w-full" />
-            <Skeleton className="h-[200px] w-full" />
+            <Skeleton className="lg:col-span-2 h-[500px]" />
+            <Skeleton className="h-[300px]" />
           </div>
         </div>
       </AppLayout>
@@ -83,10 +74,10 @@ export function EditorStudio() {
     return (
       <AppLayout title="Error">
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <AlertCircle className="size-12 text-destructive mb-4" />
-          <h2 className="text-2xl font-bold">Schema Not Found</h2>
-          <p className="text-muted-foreground mt-2">Could not load the content model for this editor.</p>
-          <Button asChild className="mt-6" variant="outline">
+          <AlertCircle className="size-16 text-destructive mb-4" />
+          <h2 className="text-3xl font-black">Editor Fault</h2>
+          <p className="text-muted-foreground font-bold mt-2">Could not retrieve content schema.</p>
+          <Button asChild className="mt-8 font-bold" variant="outline">
             <Link to="/schema">Return to Architect</Link>
           </Button>
         </div>
@@ -96,62 +87,61 @@ export function EditorStudio() {
   return (
     <AppLayout title={isEditing ? `Edit ${schema.name}` : `New ${schema.name}`}>
       <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-8 animate-in fade-in duration-500">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
+        <div className="flex items-center justify-between border-b pb-6">
+          <div className="flex items-center gap-6">
+            <Button variant="outline" size="icon" asChild className="border-2 rounded-xl h-12 w-12">
               <Link to={`/content/${typeId}`}>
-                <ChevronLeft className="size-5" />
+                <ChevronLeft className="size-6" />
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                {isEditing ? `Edit Entry` : `Create ${schema.name}`}
+              <h1 className="text-3xl font-black tracking-tight">
+                {isEditing ? `Edit Entry` : `Create Entry`}
               </h1>
-              <p className="text-sm text-muted-foreground">{schema.name} model</p>
+              <p className="text-sm font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest">{schema.name} model</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" type="button" onClick={() => navigate(`/content/${typeId}`)}>
-              Cancel
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" type="button" onClick={() => navigate(`/content/${typeId}`)} className="font-bold">
+              Discard Changes
             </Button>
-            <Button className="btn-gradient" type="submit" disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? <Loader2 className="animate-spin mr-2 size-4" /> : <Save className="mr-2 size-4" />}
-              {isEditing ? 'Save Changes' : 'Publish Entry'}
+            <Button className="btn-gradient px-8 py-6 h-auto" type="submit" disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? <Loader2 className="animate-spin mr-2 size-5" /> : <Save className="mr-2 size-5" />}
+              {isEditing ? 'Sync Changes' : 'Publish Entry'}
             </Button>
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="obsidian-card border-border/40">
-              <CardHeader>
-                <CardTitle>Content Fields</CardTitle>
-                <CardDescription>Enter the data for this {schema.name} entry.</CardDescription>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          <div className="lg:col-span-2 space-y-8">
+            <Card className="border-2 border-border bg-card shadow-soft">
+              <CardHeader className="border-b">
+                <CardTitle className="text-xl font-black">Content Fields</CardTitle>
+                <CardDescription className="text-muted-foreground font-semibold">Structured data for this {schema.name}.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="p-8 space-y-8">
                 {schema.fields.map((field) => (
-                  <div key={field.id} className="space-y-2">
-                    <Label className="flex items-center gap-1 font-medium">
+                  <div key={field.id} className="space-y-3">
+                    <Label className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-1">
                       {field.label}
-                      {field.required && <span className="text-destructive">*</span>}
+                      {field.required && <span className="text-destructive font-bold text-lg">*</span>}
                     </Label>
                     {field.type === 'text' && (
                       <Input
-                        className="bg-zinc-950/50"
-                        placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}...`}
+                        className="h-12 border-2 bg-background font-medium focus:ring-2 focus:ring-orange-500/20"
+                        placeholder={field.placeholder || `Enter value...`}
                         {...form.register(`data.${field.slug}`, { required: field.required })}
                       />
                     )}
                     {field.type === 'rich-text' && (
                       <Textarea
-                        className="bg-zinc-950/50"
-                        rows={8}
-                        placeholder={field.placeholder || `Write content...`}
+                        className="border-2 bg-background font-medium min-h-[250px] focus:ring-2 focus:ring-orange-500/20"
+                        placeholder={field.placeholder || `Write detailed content...`}
                         {...form.register(`data.${field.slug}`, { required: field.required })}
                       />
                     )}
                     {field.type === 'number' && (
                       <Input
-                        className="bg-zinc-950/50"
+                        className="h-12 border-2 bg-background font-medium"
                         type="number"
                         {...form.register(`data.${field.slug}`, { required: field.required, valueAsNumber: true })}
                       />
@@ -161,84 +151,80 @@ export function EditorStudio() {
                         control={form.control}
                         name={`data.${field.slug}`}
                         render={({ field: { value, onChange } }) => (
-                          <div className="flex items-center gap-2 p-3 rounded-md bg-zinc-950/50 border border-zinc-800/50">
-                            <Switch checked={!!value} onCheckedChange={onChange} />
-                            <span className="text-sm text-muted-foreground">{value ? 'Yes / Enabled' : 'No / Disabled'}</span>
+                          <div className="flex items-center justify-between p-4 rounded-xl border-2 bg-secondary/30">
+                            <span className="text-sm font-bold">{value ? 'ENABLED' : 'DISABLED'}</span>
+                            <Switch checked={!!value} onCheckedChange={onChange} className="data-[state=checked]:bg-orange-600" />
                           </div>
                         )}
                       />
                     )}
                     {field.type === 'date' && (
                       <Input
-                        className="bg-zinc-950/50"
+                        className="h-12 border-2 bg-background font-medium"
                         type="datetime-local"
                         {...form.register(`data.${field.slug}`, { required: field.required })}
                       />
                     )}
                     {field.type === 'media' && (
-                      <div className="p-4 border-2 border-dashed rounded-lg bg-zinc-950/50 border-zinc-800 flex flex-col items-center justify-center gap-2 transition-colors hover:bg-zinc-900/50">
-                        <FileText className="size-8 text-muted-foreground/40" />
+                      <div className="p-6 border-2 border-dashed rounded-xl bg-secondary/20 flex flex-col gap-4">
                         <Input
-                          className="bg-transparent border-zinc-800"
-                          placeholder="Media URL"
+                          className="border-2 bg-background font-bold text-xs"
+                          placeholder="PASTE MEDIA ASSET URL HERE"
                           {...form.register(`data.${field.slug}`, { required: field.required })}
                         />
-                        <span className="text-2xs text-muted-foreground italic">Paste a public URL from the Asset Library</span>
+                        <p className="text-[10px] font-black text-muted-foreground uppercase text-center">Reference from the global asset library</p>
                       </div>
                     )}
+                    {field.description && <p className="text-xs font-semibold text-muted-foreground">{field.description}</p>}
                   </div>
                 ))}
               </CardContent>
             </Card>
           </div>
-          <div className="space-y-6">
-            <Card className="obsidian-card border-border/40">
-              <CardHeader>
-                <CardTitle>Publishing</CardTitle>
+          <div className="space-y-8">
+            <Card className="border-2 border-border bg-card shadow-soft">
+              <CardHeader className="bg-secondary/20 border-b">
+                <CardTitle className="text-lg font-black">Publishing Hub</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Workflow Status</Label>
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-xs font-black uppercase tracking-widest">Workflow State</Label>
                   <Controller
                     control={form.control}
                     name="status"
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="bg-zinc-950/50 border-zinc-800">
-                          <SelectValue placeholder="Select status" />
+                        <SelectTrigger className="h-12 border-2 font-bold bg-background">
+                          <SelectValue placeholder="Select Status" />
                         </SelectTrigger>
-                        <SelectContent className="bg-zinc-950 border-zinc-800">
-                          <SelectItem value="draft">Draft</SelectItem>
-                          <SelectItem value="published">Published</SelectItem>
-                          <SelectItem value="archived">Archived</SelectItem>
+                        <SelectContent>
+                          <SelectItem value="draft" className="font-bold">Draft</SelectItem>
+                          <SelectItem value="published" className="font-bold">Published</SelectItem>
+                          <SelectItem value="archived" className="font-bold text-destructive">Archived</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
                   />
                 </div>
-                <div className="pt-4 border-t border-zinc-800/50 text-[10px] space-y-2 text-muted-foreground uppercase tracking-wider font-semibold">
-                  <div className="flex justify-between">
-                    <span>Created At</span>
-                    <span className="text-foreground">{existingItem ? format(existingItem.createdAt, 'MMM d, yyyy') : 'Current Session'}</span>
+                <div className="pt-6 border-t space-y-3">
+                  <div className="flex justify-between text-[11px] font-black uppercase text-muted-foreground">
+                    <span>Model ID</span>
+                    <span className="text-foreground">{typeId}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Last Sync</span>
-                    <span className="text-foreground">{existingItem ? format(existingItem.updatedAt, 'HH:mm:ss') : 'Unsaved'}</span>
+                  <div className="flex justify-between text-[11px] font-black uppercase text-muted-foreground">
+                    <span>Created</span>
+                    <span className="text-foreground">{existingItem ? format(existingItem.createdAt, 'MMM dd, yyyy') : 'NEW'}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card className="obsidian-card border-border/40 bg-primary/5">
+            <Card className="border-2 border-orange-500/20 bg-orange-500/5">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Metadata</CardTitle>
+                <CardTitle className="text-xs font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">System Trace</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="text-[11px] text-muted-foreground break-all font-mono">
-                  ID: {id || 'Auto-generated'}
-                </div>
-                <div className="text-[11px] text-muted-foreground font-mono">
-                  Type: {typeId}
-                </div>
+              <CardContent className="font-mono text-[10px] break-all text-muted-foreground leading-relaxed">
+                ID: {id || 'PENDING_GENERATION'}<br/>
+                ENGINE_VERSION: 1.4.0_CONTRAST_REF
               </CardContent>
             </Card>
           </div>
