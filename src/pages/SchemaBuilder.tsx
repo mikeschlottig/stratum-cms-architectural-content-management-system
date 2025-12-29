@@ -21,12 +21,12 @@ const FIELD_TYPES: { type: FieldType; label: string }[] = [
   { type: 'media', label: 'Media' },
   { type: 'reference', label: 'Reference' },
 ];
-function SortableField({ 
-  field, 
-  onUpdate, 
-  onRemove 
-}: { 
-  field: FieldDefinition; 
+function SortableField({
+  field,
+  onUpdate,
+  onRemove
+}: {
+  field: FieldDefinition;
   onUpdate: (id: string, updates: Partial<FieldDefinition>) => void;
   onRemove: (id: string) => void;
 }) {
@@ -103,6 +103,15 @@ export function SchemaBuilder() {
       setEditingType(null);
     },
   });
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api(`/api/types/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["content-types"] });
+      toast.success("Model purged from core");
+      setEditingType(null);
+    },
+    onError: (err: any) => toast.error(`Deletion failed: ${err.message}`),
+  });
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
     if (active.id !== over?.id && editingType?.fields) {
@@ -124,6 +133,12 @@ export function SchemaBuilder() {
       required: false,
     };
     setEditingType({ ...editingType, fields: [...(editingType.fields || []), newField] });
+  };
+  const handleDeleteModel = () => {
+    if (!editingType?.id) return;
+    if (confirm(`Purge "${editingType.name}" model? All associated data will become orphaned.`)) {
+      deleteMutation.mutate(editingType.id);
+    }
   };
   if (isLoading) return <AppLayout title="Schema Architect"><div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-primary" /></div></AppLayout>;
   return (
@@ -171,8 +186,17 @@ export function SchemaBuilder() {
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  {editingType.id && (
+                    <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={handleDeleteModel} disabled={deleteMutation.isPending}>
+                      {deleteMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4 mr-2" />}
+                      Delete Model
+                    </Button>
+                  )}
                   <Button variant="outline" size="sm" onClick={() => setEditingType(null)}>Discard</Button>
-                  <Button className="btn-gradient" size="sm" onClick={() => saveMutation.mutate(editingType)}>Save Schema</Button>
+                  <Button className="btn-gradient" size="sm" onClick={() => saveMutation.mutate(editingType)} disabled={saveMutation.isPending}>
+                    {saveMutation.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+                    Save Schema
+                  </Button>
                 </div>
               </div>
               <div className="flex justify-between items-center">
@@ -185,9 +209,9 @@ export function SchemaBuilder() {
                 <SortableContext items={editingType.fields?.map(f => f.id) || []} strategy={verticalListSortingStrategy}>
                   <div className="space-y-1">
                     {editingType.fields?.map((field) => (
-                      <SortableField 
-                        key={field.id} 
-                        field={field} 
+                      <SortableField
+                        key={field.id}
+                        field={field}
                         onRemove={(id) => setEditingType({ ...editingType, fields: editingType.fields?.filter(f => f.id !== id) })}
                         onUpdate={(id, updates) => setEditingType({ ...editingType, fields: editingType.fields?.map(f => f.id === id ? { ...f, ...updates } : f) })}
                       />

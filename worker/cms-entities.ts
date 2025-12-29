@@ -64,10 +64,21 @@ export class ContentItemEntity extends IndexedEntity<ContentItem> {
       title: String(titleField),
       content: searchableString
     };
-    // Store search record metadata in a dedicated entity
     await new SearchRecordEntity(env, item.id).save(searchRecord);
     await searchIdx.add(item.id);
     return item;
+  }
+  static async deleteItem(env: Env, id: string): Promise<boolean> {
+    const itemEntity = new this(env, id);
+    const state = await itemEntity.getState();
+    if (!state.id) return false;
+    // Remove from indices
+    await new Index(env, this.indexName).remove(id);
+    await new Index(env, `cms-type-items:${state.typeId}`).remove(id);
+    await new Index(env, "cms-search-index").remove(id);
+    // Cleanup search metadata and item
+    await new SearchRecordEntity(env, id).delete();
+    return await itemEntity.delete();
   }
   static async listByType(env: Env, typeId: string, cursor?: string | null, limit?: number) {
     const idx = new Index<string>(env, `cms-type-items:${typeId}`);
@@ -87,6 +98,10 @@ export class MediaEntity extends IndexedEntity<MediaAsset> {
     size: 0,
     createdAt: 0
   };
+  static async deleteAsset(env: Env, id: string): Promise<boolean> {
+    await new Index(env, this.indexName).remove(id);
+    return await new this(env, id).delete();
+  }
 }
 export class SearchRecordEntity extends Entity<SearchRecord> {
   static readonly entityName = "cms-search-record";

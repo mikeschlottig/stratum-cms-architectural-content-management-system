@@ -1,17 +1,19 @@
 import React from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit2, FileText, Database } from "lucide-react";
+import { Plus, Edit2, FileText, Database, Trash2, Loader2 } from "lucide-react";
 import type { ContentType, ContentItem } from "@/types/schema";
 import { format } from "date-fns";
+import { toast } from "sonner";
 export function ContentMatrix() {
   const { typeId } = useParams<{ typeId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: schema, isLoading: schemaLoading } = useQuery({
     queryKey: ["content-type", typeId],
     queryFn: () => api<ContentType>(`/api/types/${typeId}`),
@@ -22,6 +24,20 @@ export function ContentMatrix() {
     queryFn: () => api<{ items: ContentItem[] }>(`/api/content/${typeId}`),
     enabled: !!typeId,
   });
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api(`/api/content/${typeId}/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["content-items", typeId] });
+      toast.success("Entry purged from matrix");
+    },
+    onError: (err: any) => toast.error(`Deletion failed: ${err.message}`),
+  });
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (confirm("Permanently delete this entry?")) {
+      deleteMutation.mutate(id);
+    }
+  };
   if (schemaLoading || itemsLoading) {
     return (
       <AppLayout title="Loading Matrix...">
@@ -78,8 +94,8 @@ export function ContentMatrix() {
                   onClick={() => navigate(`/content/${typeId}/edit/${item.id}`)}
                 >
                   <TableCell>
-                    <Badge 
-                      variant={item.status === 'published' ? 'default' : 'outline'} 
+                    <Badge
+                      variant={item.status === 'published' ? 'default' : 'outline'}
                       className={`capitalize font-black text-[10px] px-3 border-2 ${item.status === 'published' ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-border text-muted-foreground'}`}
                     >
                       {item.status}
@@ -94,9 +110,24 @@ export function ContentMatrix() {
                     {format(item.updatedAt, 'MMM d, HH:mm')}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="group-hover:bg-primary group-hover:text-primary-foreground">
-                      <Edit2 className="size-4" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="ghost" size="icon" className="hover:bg-primary hover:text-primary-foreground">
+                        <Edit2 className="size-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="hover:bg-destructive hover:text-destructive-foreground"
+                        disabled={deleteMutation.isPending && deleteMutation.variables === item.id}
+                        onClick={(e) => handleDelete(e, item.id)}
+                      >
+                        {deleteMutation.isPending && deleteMutation.variables === item.id ? (
+                          <Loader2 className="animate-spin size-4" />
+                        ) : (
+                          <Trash2 className="size-4" />
+                        )}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

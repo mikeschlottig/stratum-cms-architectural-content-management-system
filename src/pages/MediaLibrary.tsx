@@ -37,6 +37,14 @@ export function MediaLibrary() {
       setUploadProgress(0);
     }
   });
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api(`/api/media/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["media-assets"] });
+      toast.success("Asset Deleted");
+    },
+    onError: (err: any) => toast.error(`Deletion failed: ${err.message}`),
+  });
   const handleSimulatedUpload = () => {
     setIsUploading(true);
     let progress = 0;
@@ -48,6 +56,11 @@ export function MediaLibrary() {
         uploadMutation.mutate();
       }
     }, 100);
+  };
+  const handleDelete = (id: string) => {
+    if (confirm("Delete this asset permanently?")) {
+      deleteMutation.mutate(id);
+    }
   };
   const filteredMedia = media?.items?.filter(m =>
     m.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -106,15 +119,25 @@ export function MediaLibrary() {
                       <Button variant="outline" size="icon" className="h-10 w-10 text-white border-2 border-white/40 hover:bg-white hover:text-black">
                         <Download className="size-5" />
                       </Button>
-                      <Button variant="destructive" size="icon" className="h-10 w-10">
-                        <Trash2 className="size-5" />
+                      <Button 
+                        variant="destructive" 
+                        size="icon" 
+                        className="h-10 w-10"
+                        onClick={() => handleDelete(asset.id)}
+                        disabled={deleteMutation.isPending && deleteMutation.variables === asset.id}
+                      >
+                        {deleteMutation.isPending && deleteMutation.variables === asset.id ? (
+                          <Loader2 className="animate-spin size-4" />
+                        ) : (
+                          <Trash2 className="size-4" />
+                        )}
                       </Button>
                     </div>
                   </div>
                   <div className="p-4 bg-card border-t-2">
                     <p className="text-xs font-black truncate text-foreground uppercase tracking-wider">{asset.name}</p>
                     <p className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter mt-1">
-                      {asset.type.split('/')[1]} ��� {(asset.size / 1024).toFixed(0)} KB
+                      {asset.type.split('/')[1]} • {(asset.size / 1024).toFixed(0)} KB
                     </p>
                   </div>
                 </CardContent>
