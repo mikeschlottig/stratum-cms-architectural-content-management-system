@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, Database, Settings, Image as ImageIcon, Plus, Box, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Database, Settings, Image as ImageIcon, Plus, Box } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
@@ -53,7 +53,7 @@ export function AppSidebar(): JSX.Element {
           <SidebarMenu>
             {types?.items?.map((type) => (
               <SidebarMenuItem key={type.id}>
-                <SidebarMenuButton asChild isActive={isActive(`/content/${type.id}`)}>
+                <SidebarMenuButton asChild isActive={location.pathname.startsWith(`/content/${type.id}`)}>
                   <Link to={`/content/${type.id}`}>
                     <Box className="size-4" />
                     <span>{type.name}</span>
@@ -75,16 +75,17 @@ export function AppSidebar(): JSX.Element {
                   <Database className="size-4" />
                   <span>Schema Architect</span>
                 </Link>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/media")}>
-                  <Link to="/media">
-                    <ImageIcon className="size-4" />
-                    <span>Asset Library</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isActive("/media")}>
+                <Link to="/media">
+                  <ImageIcon className="size-4" />
+                  <span>Asset Library</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4 border-t border-border/40">
