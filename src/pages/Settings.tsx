@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Globe, Shield, Code, Save, RefreshCw } from "lucide-react";
+import { Globe, Shield, Code, Save, RefreshCw, Plus } from "lucide-react";
 import { toast } from "sonner";
 export function Settings() {
   const handleSave = () => {
