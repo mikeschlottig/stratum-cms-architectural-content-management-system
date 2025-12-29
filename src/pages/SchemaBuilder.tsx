@@ -41,12 +41,12 @@ function SortableField({
     <div ref={setNodeRef} style={style} className="mb-3">
       <Card className="obsidian-card group">
         <CardContent className="p-4 flex items-center gap-4">
-          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-zinc-800 rounded">
-            <GripVertical className="size-4 text-muted-foreground/40" />
+          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-zinc-800 rounded group">
+            <GripVertical className="size-4 text-foreground/50 group-hover:text-foreground/70" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
             <div className="space-y-1">
-              <Label className="text-[10px] uppercase text-zinc-500 font-bold">Field Label</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold text-zinc-300">Field Label</Label>
               <Input
                 value={field.label}
                 onChange={e => onUpdate(field.id, { label: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
@@ -54,9 +54,9 @@ function SortableField({
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-[10px] uppercase text-zinc-500 font-bold">Field Type</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold text-zinc-300">Field Type</Label>
               <select
-                className="w-full h-8 rounded-md border border-zinc-800 bg-zinc-950 px-2 text-sm focus:ring-1 focus:ring-primary outline-none"
+                className="w-full h-8 rounded-md border border-zinc-800 bg-zinc-950 px-2 text-sm text-foreground font-medium focus:ring-1 focus:ring-primary outline-none"
                 value={field.type}
                 onChange={e => onUpdate(field.id, { type: e.target.value as FieldType })}
               >
@@ -72,7 +72,7 @@ function SortableField({
                   onChange={e => onUpdate(field.id, { required: e.target.checked })}
                   className="rounded border-zinc-800 bg-zinc-950 text-primary"
                 />
-                <Label htmlFor={`req-${field.id}`} className="text-xs text-muted-foreground cursor-pointer">Required</Label>
+                <Label htmlFor={`req-${field.id}`} className="text-sm font-medium text-foreground/90 cursor-pointer">Required</Label>
               </div>
               <Button variant="ghost" size="icon" className="ml-auto text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => onRemove(field.id)}>
                 <Trash2 className="size-4" />
@@ -114,31 +114,40 @@ export function SchemaBuilder() {
   });
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
-    if (active.id !== over?.id && editingType?.fields) {
-      const oldIndex = editingType.fields.findIndex(f => f.id === active.id);
-      const newIndex = editingType.fields.findIndex(f => f.id === over.id);
-      setEditingType({
-        ...editingType,
-        fields: arrayMove(editingType.fields, oldIndex, newIndex)
+    if (active.id !== over?.id) {
+      setEditingType(prev => {
+        if (!prev?.fields) return prev;
+        const oldIndex = prev.fields.findIndex(f => f.id === active.id);
+        const newIndex = over ? prev.fields.findIndex(f => f.id === over.id) : -1;
+        if (oldIndex === -1 || newIndex === -1) return prev;
+        return {
+          ...prev,
+          fields: arrayMove(prev.fields, oldIndex, newIndex)
+        };
       });
     }
   };
   const addField = () => {
-    if (!editingType) return;
-    const newField: FieldDefinition = {
-      id: crypto.randomUUID().split('-')[0],
-      type: 'text',
-      label: 'New Field',
-      slug: `field-${Date.now()}`,
-      required: false,
-    };
-    setEditingType({ ...editingType, fields: [...(editingType.fields || []), newField] });
+    setEditingType(prev => {
+      if (!prev) return prev;
+      const newField: FieldDefinition = {
+        id: crypto.randomUUID().split('-')[0],
+        type: 'text',
+        label: 'New Field',
+        slug: `field-${Date.now()}`,
+        required: false,
+      };
+      return { ...prev, fields: [...(prev.fields || []), newField] };
+    });
   };
   const handleDeleteModel = () => {
-    if (!editingType?.id) return;
-    if (confirm(`Purge "${editingType.name}" model? All associated data will become orphaned.`)) {
-      deleteMutation.mutate(editingType.id);
-    }
+    setEditingType(prev => {
+      if (!prev?.id) return prev;
+      if (confirm(`Purge "${prev.name}" model? All associated data will become orphaned.`)) {
+        deleteMutation.mutate(prev.id);
+      }
+      return prev;
+    });
   };
   if (isLoading) return <AppLayout title="Schema Architect"><div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-primary" /></div></AppLayout>;
   return (
@@ -159,7 +168,7 @@ export function SchemaBuilder() {
                 onClick={() => setEditingType(type)}
               >
                 <div className="p-3 flex items-center gap-3">
-                  <Database className={`size-4 ${editingType?.id === type.id ? 'text-primary' : 'text-zinc-600'}`} />
+                  <Database className={`size-4 ${editingType?.id === type.id ? 'text-primary' : 'text-zinc-400'}`} />
                   <span className="text-sm font-medium">{type.name}</span>
                 </div>
               </Card>
@@ -172,23 +181,27 @@ export function SchemaBuilder() {
               <div className="flex justify-between items-center bg-zinc-950 border border-zinc-900 rounded-xl p-4">
                 <div className="flex-1 grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <Label className="text-[10px] uppercase font-bold text-zinc-500">Model Name</Label>
+                    <Label className="text-xs uppercase tracking-wider font-semibold text-zinc-300">Model Name</Label>
                     <Input
                       value={editingType.name}
-                      onChange={e => setEditingType({ ...editingType, name: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                      onChange={e => setEditingType(prev => ({ ...prev, name: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
                       className="bg-transparent border-none text-xl font-bold p-0 h-auto focus-visible:ring-0"
                       placeholder="Enter model name..."
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[10px] uppercase font-bold text-zinc-500">API Identifier</Label>
+                    <Label className="text-xs uppercase tracking-wider font-semibold text-zinc-300">API Identifier</Label>
                     <div className="text-sm font-mono text-primary">/api/content/{editingType.slug || '...'}</div>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   {editingType.id && (
                     <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={handleDeleteModel} disabled={deleteMutation.isPending}>
-                      {deleteMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4 mr-2" />}
+                      {deleteMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin mr-2" />
+                      ) : (
+                        <Trash2 className="size-4 mr-2" />
+                      )}
                       Delete Model
                     </Button>
                   )}
@@ -208,21 +221,32 @@ export function SchemaBuilder() {
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={editingType.fields?.map(f => f.id) || []} strategy={verticalListSortingStrategy}>
                   <div className="space-y-1">
-                    {editingType.fields?.map((field) => (
-                      <SortableField
-                        key={field.id}
-                        field={field}
-                        onRemove={(id) => setEditingType({ ...editingType, fields: editingType.fields?.filter(f => f.id !== id) })}
-                        onUpdate={(id, updates) => setEditingType({ ...editingType, fields: editingType.fields?.map(f => f.id === id ? { ...f, ...updates } : f) })}
-                      />
-                    ))}
+                    {editingType.fields?.map((field) => {
+                      const onRemove = (id: string) => {
+                        setEditingType(prev => ({ ...prev, fields: prev.fields?.filter(f => f.id !== id) || [] }));
+                      };
+                      const onUpdate = (id: string, updates: Partial<FieldDefinition>) => {
+                        setEditingType(prev => ({
+                          ...prev,
+                          fields: prev.fields?.map(f => f.id === id ? { ...f, ...updates } : f) || []
+                        }));
+                      };
+                      return (
+                        <SortableField
+                          key={field.id}
+                          field={field}
+                          onRemove={onRemove}
+                          onUpdate={onUpdate}
+                        />
+                      );
+                    })}
                   </div>
                 </SortableContext>
               </DndContext>
               {(!editingType.fields || editingType.fields.length === 0) && (
                 <div className="py-20 text-center border-2 border-dashed border-zinc-900 rounded-2xl">
-                  <Plus className="size-12 text-zinc-800 mx-auto mb-4" />
-                  <p className="text-zinc-500">Add fields to define your content structure.</p>
+                  <Plus className="size-12 text-zinc-600 mx-auto mb-4" />
+                  <p className="text-zinc-400">Add fields to define your content structure.</p>
                 </div>
               )}
             </div>
