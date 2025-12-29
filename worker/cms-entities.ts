@@ -1,5 +1,19 @@
 import { IndexedEntity, Entity, Env, Index } from "./core-utils";
 import type { ContentType, ContentItem } from "../src/types/schema";
+export interface MediaAsset {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+  createdAt: number;
+}
+export interface SearchRecord {
+  id: string;
+  typeId: string;
+  title: string;
+  content: string;
+}
 export class ContentTypeEntity extends IndexedEntity<ContentType> {
   static readonly entityName = "cms-type";
   static readonly indexName = "cms-types";
@@ -27,8 +41,6 @@ export class ContentTypeEntity extends IndexedEntity<ContentType> {
 }
 export class ContentItemEntity extends IndexedEntity<ContentItem> {
   static readonly entityName = "cms-item";
-  // Note: Standard IndexedEntity uses a single indexName. 
-  // For per-type listing, we override list or use a helper.
   static readonly indexName = "cms-items-all";
   static readonly initialState: ContentItem = {
     id: "",
@@ -39,12 +51,22 @@ export class ContentItemEntity extends IndexedEntity<ContentItem> {
     updatedAt: 0
   };
   static async createForItem(env: Env, item: ContentItem): Promise<ContentItem> {
-    // 1. Save item document
     await new this(env, item.id).save(item);
-    // 2. Add to global item index
     await new Index(env, this.indexName).add(item.id);
-    // 3. Add to per-type index
     await new Index(env, `cms-type-items:${item.typeId}`).add(item.id);
+    // Update Search Index
+    const searchIdx = new Index<string>(env, "cms-search-index");
+    const searchableString = Object.values(item.data).join(" ").toLowerCase();
+    const titleField = Object.values(item.data)[0] || "Untitled";
+    const searchRecord: SearchRecord = {
+      id: item.id,
+      typeId: item.typeId,
+      title: String(titleField),
+      content: searchableString
+    };
+    // Store search record metadata in a dedicated entity
+    await new SearchRecordEntity(env, item.id).save(searchRecord);
+    await searchIdx.add(item.id);
     return item;
   }
   static async listByType(env: Env, typeId: string, cursor?: string | null, limit?: number) {
@@ -54,16 +76,19 @@ export class ContentItemEntity extends IndexedEntity<ContentItem> {
     return { items: rows, next };
   }
 }
-export class TypeIndexEntity extends Entity<{ itemIds: string[] }> {
-  static readonly entityName = "cms-type-index";
-  static readonly initialState = { itemIds: [] };
-  constructor(env: Env, typeId: string) {
-    super(env, `type-index:${typeId}`);
-  }
-  async addItem(id: string) {
-    await this.mutate(s => ({ ...s, itemIds: [...new Set([...s.itemIds, id])] }));
-  }
-  async removeItem(id: string) {
-    await this.mutate(s => ({ ...s, itemIds: s.itemIds.filter(x => x !== id) }));
-  }
+export class MediaEntity extends IndexedEntity<MediaAsset> {
+  static readonly entityName = "cms-media";
+  static readonly indexName = "cms-assets";
+  static readonly initialState: MediaAsset = {
+    id: "",
+    name: "",
+    url: "",
+    type: "",
+    size: 0,
+    createdAt: 0
+  };
+}
+export class SearchRecordEntity extends Entity<SearchRecord> {
+  static readonly entityName = "cms-search-record";
+  static readonly initialState: SearchRecord = { id: "", typeId: "", title: "", content: "" };
 }

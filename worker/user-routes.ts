@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 import type { Env } from './core-utils';
-import { UserEntity, ChatBoardEntity } from "./entities";
-import { ok, bad, notFound, isStr } from './core-utils';
-import { ContentTypeEntity, ContentItemEntity } from "./cms-entities";
+import { UserEntity } from "./entities";
+import { ok, bad, notFound } from './core-utils';
+import { ContentTypeEntity, ContentItemEntity, MediaEntity, SearchRecordEntity } from "./cms-entities";
 import type { ContentItem } from "../src/types/schema";
+import { Index } from "./core-utils";
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
-  // CONTENT TYPES (SCHEMAS)
+  // CONTENT TYPES
   app.get('/api/types', async (c) => {
     await ContentTypeEntity.ensureSeed(c.env);
     const page = await ContentTypeEntity.list(c.env, c.req.query('cursor') ?? null);
@@ -27,31 +28,23 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     await ContentTypeEntity.create(c.env, type);
     return ok(c, type);
   });
-  app.delete('/api/types/:id', async (c) => {
-    const deleted = await ContentTypeEntity.delete(c.env, c.req.param('id'));
-    return ok(c, { deleted });
-  });
-  // CONTENT ITEMS (CRUD)
+  // CONTENT ITEMS
   app.get('/api/content/:typeId', async (c) => {
     const typeId = c.req.param('typeId');
-    const cursor = c.req.query('cursor');
-    const limit = c.req.query('limit') ? Number(c.req.query('limit')) : 20;
-    const page = await ContentItemEntity.listByType(c.env, typeId, cursor, limit);
+    const page = await ContentItemEntity.listByType(c.env, typeId, c.req.query('cursor'), c.req.query('limit') ? Number(c.req.query('limit')) : 20);
     return ok(c, page);
   });
   app.get('/api/content/:typeId/:id', async (c) => {
-    const id = c.req.param('id');
-    const item = new ContentItemEntity(c.env, id);
+    const item = new ContentItemEntity(c.env, c.req.param('id'));
     if (!(await item.exists())) return notFound(c, 'Item not found');
     return ok(c, await item.getState());
   });
   app.post('/api/content/:typeId', async (c) => {
     const typeId = c.req.param('typeId');
-    const data = await c.req.json() as Partial<ContentItem>;
-    if (!data.id) data.id = crypto.randomUUID();
+    const data = await c.req.json();
     const now = Date.now();
     const item: ContentItem = {
-      id: data.id,
+      id: data.id || crypto.randomUUID(),
       typeId: typeId,
       data: data.data || {},
       status: data.status || 'draft',
@@ -61,17 +54,43 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     await ContentItemEntity.createForItem(c.env, item);
     return ok(c, item);
   });
-  app.delete('/api/content/:typeId/:id', async (c) => {
-    const id = c.req.param('id');
-    const deleted = await ContentItemEntity.delete(c.env, id);
-    return ok(c, { deleted });
+  // MEDIA
+  app.get('/api/media', async (c) => {
+    const page = await MediaEntity.list(c.env, c.req.query('cursor'));
+    return ok(c, page);
   });
-  // SYSTEM TEST
-  app.get('/api/test', (c) => c.json({ success: true, data: { name: 'CF Workers Demo' }}));
-  // USERS & CHATS (Templates)
+  app.post('/api/media', async (c) => {
+    const body = await c.req.json();
+    const asset = {
+      id: crypto.randomUUID(),
+      name: body.name || "untitled-asset",
+      url: body.url || `https://picsum.photos/seed/${Math.random()}/800/600`,
+      type: body.type || "image/jpeg",
+      size: body.size || Math.floor(Math.random() * 500000),
+      createdAt: Date.now()
+    };
+    await MediaEntity.create(c.env, asset);
+    return ok(c, asset);
+  });
+  // GLOBAL SEARCH
+  app.get('/api/search', async (c) => {
+    const query = (c.req.query('q') || "").toLowerCase();
+    if (!query) return ok(c, { items: [] });
+    const searchIdx = new Index<string>(c.env, "cms-search-index");
+    const ids = await searchIdx.list();
+    const results = [];
+    for (const id of ids) {
+      const record = await new SearchRecordEntity(c.env, id).getState();
+      if (record.title.toLowerCase().includes(query) || record.content.toLowerCase().includes(query)) {
+        results.push(record);
+      }
+      if (results.length >= 10) break;
+    }
+    return ok(c, { items: results });
+  });
+  // USERS
   app.get('/api/users', async (c) => {
     await UserEntity.ensureSeed(c.env);
-    const page = await UserEntity.list(c.env, c.req.query('cursor') ?? null);
-    return ok(c, page);
+    return ok(c, await UserEntity.list(c.env, c.req.query('cursor')));
   });
 }

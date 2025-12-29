@@ -15,6 +15,8 @@ import { HomePage } from '@/pages/HomePage'
 import { SchemaBuilder } from '@/pages/SchemaBuilder'
 import { ContentMatrix } from '@/pages/ContentMatrix'
 import { EditorStudio } from '@/pages/EditorStudio'
+import { MediaLibrary } from '@/pages/MediaLibrary'
+import { Settings } from '@/pages/Settings'
 const queryClient = new QueryClient();
 const router = createBrowserRouter([
   {
@@ -40,6 +42,16 @@ const router = createBrowserRouter([
   {
     path: "/content/:typeId/edit/:id",
     element: <EditorStudio />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/media",
+    element: <MediaLibrary />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/settings",
+    element: <Settings />,
     errorElement: <RouteErrorBoundary />,
   },
 ]);

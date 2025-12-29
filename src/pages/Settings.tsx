@@ -6,107 +6,110 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Globe, Shield, Code, Save, RefreshCw, Plus } from "lucide-react";
+import { Globe, Shield, Code, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 export function Settings() {
   const handleSave = () => {
-    toast.success("Global System State Synced");
+    toast.success("Settings updated successfully");
   };
   return (
-    <AppLayout title="System Configuration">
-      <div className="space-y-10 animate-in fade-in duration-500">
-        <div className="flex justify-between items-end border-b pb-8">
+    <AppLayout title="System Settings">
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-black tracking-tight">System Node</h1>
-            <p className="text-muted-foreground font-bold text-lg mt-1">Global management and security protocols.</p>
+            <h1 className="text-3xl font-bold tracking-tight">System Configuration</h1>
+            <p className="text-muted-foreground">Global controls and API configuration for Stratum.</p>
           </div>
-          <Button className="btn-gradient px-8 py-6 h-auto" onClick={handleSave}>
-            <Save className="mr-2 size-5" /> Commit Changes
+          <Button className="btn-gradient" onClick={handleSave}>
+            <Save className="mr-2 size-4" /> Save Global State
           </Button>
         </div>
-        <Tabs defaultValue="general" className="space-y-8">
-          <TabsList className="bg-secondary p-1.5 h-16 rounded-2xl border-2 border-border shadow-soft">
-            <TabsTrigger value="general" className="flex items-center gap-3 px-10 h-full data-[state=active]:bg-background data-[state=active]:text-orange-600 data-[state=active]:shadow-soft font-black uppercase tracking-widest text-xs">
+        <Tabs defaultValue="general" className="space-y-6">
+          <TabsList className="bg-zinc-950 border border-zinc-900 p-1 h-12">
+            <TabsTrigger value="general" className="flex items-center gap-2 px-6 h-10 data-[state=active]:bg-zinc-900">
               <Globe className="size-4" /> General
             </TabsTrigger>
-            <TabsTrigger value="api" className="flex items-center gap-3 px-10 h-full data-[state=active]:bg-background data-[state=active]:text-orange-600 data-[state=active]:shadow-soft font-black uppercase tracking-widest text-xs">
-              <Code className="size-4" /> API Gateway
+            <TabsTrigger value="api" className="flex items-center gap-2 px-6 h-10 data-[state=active]:bg-zinc-900">
+              <Code className="size-4" /> API Access
             </TabsTrigger>
-            <TabsTrigger value="localization" className="flex items-center gap-3 px-10 h-full data-[state=active]:bg-background data-[state=active]:text-orange-600 data-[state=active]:shadow-soft font-black uppercase tracking-widest text-xs">
+            <TabsTrigger value="localization" className="flex items-center gap-2 px-6 h-10 data-[state=active]:bg-zinc-900">
               <RefreshCw className="size-4" /> Localization
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="general" className="space-y-8 animate-in slide-in-from-left-4 duration-300">
-            <Card className="border-2 border-border bg-card shadow-soft">
-              <CardHeader className="border-b">
-                <CardTitle className="text-xl font-black">Identity Protocol</CardTitle>
-                <CardDescription className="font-semibold text-muted-foreground">Core identification for this Stratum instance.</CardDescription>
+          <TabsContent value="general" className="space-y-6 animate-in slide-in-from-left-4 duration-300">
+            <Card className="obsidian-card">
+              <CardHeader>
+                <CardTitle>Instance Profile</CardTitle>
+                <CardDescription>Primary identification for this CMS instance.</CardDescription>
               </CardHeader>
-              <CardContent className="p-8 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <Label className="text-xs font-black uppercase tracking-widest">Instance Name</Label>
-                    <Input defaultValue="STRATUM_CORE_01" className="h-12 border-2 bg-background font-bold text-lg" />
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Site Name</Label>
+                    <Input defaultValue="Stratum Production" className="bg-zinc-950 border-zinc-900" />
                   </div>
-                  <div className="space-y-3">
-                    <Label className="text-xs font-black uppercase tracking-widest">System URL</Label>
-                    <Input defaultValue="https://cms.stratum.io" className="h-12 border-2 bg-background font-bold text-lg" />
+                  <div className="space-y-2">
+                    <Label>Base URL</Label>
+                    <Input defaultValue="https://cms.stratum.io" className="bg-zinc-950 border-zinc-900" />
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-6 bg-secondary/50 rounded-2xl border-2 border-border">
+                <div className="flex items-center justify-between p-4 bg-zinc-950 rounded-lg border border-zinc-900">
                   <div className="space-y-1">
-                    <p className="text-base font-black uppercase tracking-tight">Public Node Access</p>
-                    <p className="text-xs text-muted-foreground font-bold">Allow external requests for registration on this instance.</p>
+                    <p className="text-sm font-medium">Public Registration</p>
+                    <p className="text-xs text-muted-foreground">Allow new users to request access to this instance.</p>
                   </div>
-                  <Switch className="data-[state=checked]:bg-orange-600" />
+                  <Switch />
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
-          <TabsContent value="api" className="space-y-8 animate-in slide-in-from-left-4 duration-300">
-            <Card className="border-2 border-border bg-card shadow-soft">
-              <CardHeader className="border-b">
-                <CardTitle className="text-xl font-black">Security Credentials</CardTitle>
-                <CardDescription className="font-semibold text-muted-foreground">Manage keys for headless content delivery.</CardDescription>
+          <TabsContent value="api" className="space-y-6 animate-in slide-in-from-left-4 duration-300">
+            <Card className="obsidian-card">
+              <CardHeader>
+                <CardTitle>Headless Delivery Keys</CardTitle>
+                <CardDescription>Use these keys to consume content from your external applications.</CardDescription>
               </CardHeader>
-              <CardContent className="p-8 space-y-8">
-                <div className="space-y-4">
-                  <Label className="text-xs font-black uppercase tracking-widest">Master Read Access Key</Label>
-                  <div className="flex gap-4">
-                    <Input readOnly value="sk_stratum_live_9238_alpha_v4" className="h-12 border-2 font-mono bg-secondary font-black text-foreground" />
-                    <Button variant="default" className="h-12 px-8 font-black">REGENERATE</Button>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Master Read Key (Production)</Label>
+                  <div className="flex gap-2">
+                    <Input readOnly value="sk_live_stratum_9238jdf823nd9" className="font-mono bg-zinc-950 border-zinc-900" />
+                    <Button variant="outline">Copy</Button>
                   </div>
-                  <p className="text-[10px] font-black text-rose-600 uppercase">Warning: Key rotation will disconnect all production clients.</p>
                 </div>
-                <div className="p-8 bg-orange-500/10 border-2 border-orange-500/20 rounded-2xl">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Shield className="size-6 text-orange-600 dark:text-orange-400" />
-                    <span className="text-sm font-black uppercase tracking-widest">Encryption Protocol Active</span>
+                <div className="space-y-2">
+                  <Label>Webhook Endpoint</Label>
+                  <Input placeholder="https://your-app.com/api/webhook" className="bg-zinc-950 border-zinc-900" />
+                </div>
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="size-4 text-primary" />
+                    <span className="text-sm font-bold uppercase tracking-widest">Security Advisory</span>
                   </div>
-                  <p className="text-xs text-muted-foreground font-bold leading-relaxed">
-                    All delivery endpoints are protected with AES-256 equivalent hashing via the Cloudflare Workers edge runtime.
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Always keep your delivery keys secret. If a key is compromised, rotate it immediately in the "Key Management" sub-tab.
                   </p>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
-          <TabsContent value="localization" className="space-y-8 animate-in slide-in-from-left-4 duration-300">
-            <Card className="border-2 border-border bg-card shadow-soft">
-              <CardHeader className="border-b">
-                <CardTitle className="text-xl font-black">Regional Config</CardTitle>
-                <CardDescription className="font-semibold text-muted-foreground">Configure content locales and regional overrides.</CardDescription>
+          <TabsContent value="localization" className="space-y-6 animate-in slide-in-from-left-4 duration-300">
+            <Card className="obsidian-card">
+              <CardHeader>
+                <CardTitle>Language Configuration</CardTitle>
+                <CardDescription>Define which locales are supported for multi-regional content.</CardDescription>
               </CardHeader>
-              <CardContent className="p-8 space-y-6">
-                <div className="grid grid-cols-1 gap-4">
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
                   {['English (US)', 'Spanish (ES)', 'German (DE)'].map(lang => (
-                    <div key={lang} className="flex items-center justify-between p-5 rounded-xl border-2 border-border bg-background hover:border-primary transition-colors">
-                      <span className="text-sm font-black uppercase tracking-widest">{lang}</span>
-                      <Button variant="ghost" size="sm" className="text-rose-600 font-black hover:bg-rose-600/10 uppercase text-[10px] tracking-widest">Purge Locale</Button>
+                    <div key={lang} className="flex items-center justify-between p-3 rounded-md border border-zinc-900 bg-zinc-950/50">
+                      <span className="text-sm font-medium">{lang}</span>
+                      <Button variant="ghost" size="sm" className="text-destructive">Remove</Button>
                     </div>
                   ))}
                 </div>
-                <Button variant="outline" className="w-full h-14 border-4 border-dashed border-border font-black uppercase tracking-widest hover:bg-secondary">
-                  <Plus className="size-5 mr-2" /> Add Regional Locale
+                <Button variant="outline" className="w-full border-dashed border-zinc-800">
+                  <Plus className="size-4 mr-2" /> Add Locale
                 </Button>
               </CardContent>
             </Card>
