@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { jwt, sign } from "hono/jwt";
 import type { Env } from './core-utils';
 import { ok, bad, notFound, Index } from './core-utils';
-import { ContentTypeEntity, ContentItemEntity, MediaEntity, UserEntity, AuditLogEntity, SearchRecordEntity } from "./cms-entities";
+import { ContentTypeEntity, ContentItemEntity, MediaEntity, AuditLogEntity, SearchRecordEntity } from "./cms-entities";
 import type { ContentItem, User, ContentType } from "../shared/types";
 const JWT_SECRET = "stratum-core-secret-2025";
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
@@ -24,13 +24,16 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   const getAuthUser = (c: any): User => c.get('jwtPayload') as User;
   app.get('/api/search', async (c) => {
     const q = c.req.query('q')?.toLowerCase() || "";
+    if (!q) return ok(c, { items: [] });
     const idx = new Index<string>(c.env, "cms-search-index");
     const ids = await idx.list();
     const records = await Promise.all(ids.map(id => new SearchRecordEntity(c.env, id).getState()));
-    const filtered = records.filter(r => 
-      r.title.toLowerCase().includes(q) || 
-      r.content.toLowerCase().includes(q)
-    ).slice(0, 10);
+    const filtered = records
+      .filter(r => r && r.id && (
+        r.title.toLowerCase().includes(q) || 
+        r.content.toLowerCase().includes(q)
+      ))
+      .slice(0, 10);
     return ok(c, { items: filtered });
   });
   app.get('/api/audit/:itemId', async (c) => {
@@ -45,7 +48,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.get('/api/types/:id', async (c) => {
     const id = c.req.param('id');
     const type = await new ContentTypeEntity(c.env, id).getState();
-    if (!type.id) return notFound(c, 'Type not found');
+    if (!type || !type.id) return notFound(c, 'Model configuration not found');
     return ok(c, type);
   });
   app.post('/api/types', async (c) => {
@@ -70,7 +73,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       });
       return ok(c, { id });
     }
-    return notFound(c, 'Type not found');
+    return notFound(c, 'Model not found');
   });
   app.get('/api/content/:typeId', async (c) => {
     const typeId = c.req.param('typeId');
@@ -80,7 +83,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.get('/api/content/:typeId/:id', async (c) => {
     const id = c.req.param('id');
     const item = await new ContentItemEntity(c.env, id).getState();
-    if (!item.id) return notFound(c, 'Item not found');
+    if (!item || !item.id) return notFound(c, 'Content node not found');
     return ok(c, item);
   });
   app.post('/api/content/:typeId', async (c) => {
@@ -115,7 +118,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       });
       return ok(c, { id });
     }
-    return notFound(c, 'Item not found');
+    return notFound(c, 'Content node not found');
   });
   app.get('/api/media', async (c) => ok(c, await MediaEntity.list(c.env, c.req.query('cursor'))));
   app.post('/api/media', async (c) => {
@@ -123,10 +126,10 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const body = await c.req.json();
     const asset = {
       id: crypto.randomUUID(),
-      name: body.name || "untitled",
+      name: body.name || "untitled_asset",
       url: body.url || `https://picsum.photos/seed/${Math.random()}/800/600`,
       type: body.type || "image/jpeg",
-      size: 1024,
+      size: Math.floor(Math.random() * 500000) + 10000,
       createdAt: Date.now()
     };
     await MediaEntity.create(c.env, asset);
