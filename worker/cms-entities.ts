@@ -17,7 +17,13 @@ export interface SearchRecord {
 export class UserEntity extends IndexedEntity<User & { passwordHash: string }> {
   static readonly entityName = "cms-user";
   static readonly indexName = "cms-users";
-  static readonly initialState = { id: "", email: "", name: "", role: 'viewer' as const, passwordHash: "" };
+  static readonly initialState = { 
+    id: "", 
+    email: "", 
+    name: "", 
+    role: 'viewer' as const, 
+    passwordHash: "" 
+  };
 }
 export class AuditLogEntity extends IndexedEntity<AuditLog> {
   static readonly entityName = "cms-audit";
@@ -48,7 +54,13 @@ export class AuditLogEntity extends IndexedEntity<AuditLog> {
 export class ContentTypeEntity extends IndexedEntity<ContentType> {
   static readonly entityName = "cms-type";
   static readonly indexName = "cms-types";
-  static readonly initialState: ContentType = { id: "", name: "", slug: "", fields: [], updatedAt: 0 };
+  static readonly initialState: ContentType = { 
+    id: "", 
+    name: "", 
+    slug: "", 
+    fields: [], 
+    updatedAt: 0 
+  };
   static seedData: ContentType[] = [
     {
       id: "blog-post",
@@ -67,7 +79,14 @@ export class ContentTypeEntity extends IndexedEntity<ContentType> {
 export class ContentItemEntity extends IndexedEntity<ContentItem> {
   static readonly entityName = "cms-item";
   static readonly indexName = "cms-items-all";
-  static readonly initialState: ContentItem = { id: "", typeId: "", data: {}, status: 'draft', createdAt: 0, updatedAt: 0 };
+  static readonly initialState: ContentItem = { 
+    id: "", 
+    typeId: "", 
+    data: {}, 
+    status: 'draft', 
+    createdAt: 0, 
+    updatedAt: 0 
+  };
   static async createForItem(env: Env, item: ContentItem): Promise<ContentItem> {
     await new this(env, item.id).save(item);
     await new Index(env, this.indexName).add(item.id);
@@ -75,7 +94,12 @@ export class ContentItemEntity extends IndexedEntity<ContentItem> {
     const searchIdx = new Index<string>(env, "cms-search-index");
     const searchableString = Object.values(item.data).join(" ").toLowerCase();
     const titleField = Object.values(item.data)[0] || "Untitled";
-    const searchRecord = { id: item.id, typeId: item.typeId, title: String(titleField), content: searchableString };
+    const searchRecord = { 
+      id: item.id, 
+      typeId: item.typeId, 
+      title: String(titleField), 
+      content: searchableString 
+    };
     await new SearchRecordEntity(env, item.id).save(searchRecord);
     await searchIdx.add(item.id);
     return item;
@@ -100,7 +124,14 @@ export class ContentItemEntity extends IndexedEntity<ContentItem> {
 export class MediaEntity extends IndexedEntity<MediaAsset> {
   static readonly entityName = "cms-media";
   static readonly indexName = "cms-assets";
-  static readonly initialState: MediaAsset = { id: "", name: "", url: "", type: "", size: 0, createdAt: 0 };
+  static readonly initialState: MediaAsset = { 
+    id: "", 
+    name: "", 
+    url: "", 
+    type: "", 
+    size: 0, 
+    createdAt: 0 
+  };
   static async deleteAsset(env: Env, id: string): Promise<boolean> {
     await new Index(env, this.indexName).remove(id);
     return await new this(env, id).delete();

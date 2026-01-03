@@ -2,12 +2,10 @@ import { Hono } from "hono";
 import { jwt, sign } from "hono/jwt";
 import type { Env } from './core-utils';
 import { ok, bad, notFound } from './core-utils';
-import { ContentTypeEntity, ContentItemEntity, MediaEntity, SearchRecordEntity, UserEntity, AuditLogEntity } from "./cms-entities";
-import type { ContentItem, User } from "../shared/types";
-import { Index } from "./core-utils";
+import { ContentTypeEntity, ContentItemEntity, MediaEntity, UserEntity, AuditLogEntity } from "./cms-entities";
+import type { ContentItem, User, ContentType } from "../shared/types";
 const JWT_SECRET = "stratum-core-secret-2025";
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
-  // PUBLIC AUTH ROUTES
   app.post('/api/auth/login', async (c) => {
     const { email, password } = await c.req.json();
     if (email === "admin@stratum.io" && password === "stratum123") {
@@ -17,21 +15,17 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     }
     return bad(c, "Invalid credentials");
   });
-  // PROTECTED ROUTES MIDDLEWARE
   app.use('/api/*', async (c, next) => {
     const path = c.req.path;
     if (path === '/api/auth/login' || path === '/api/health') return next();
     const authHandler = jwt({ secret: JWT_SECRET });
     return authHandler(c, next);
   });
-  // HELPER: Get Current User from Context
   const getAuthUser = (c: any): User => c.get('jwtPayload') as User;
-  // AUDIT LOGS
   app.get('/api/audit/:itemId', async (c) => {
     const logs = await AuditLogEntity.listByItem(c.env, c.req.param('itemId'));
     return ok(c, { items: logs });
   });
-  // CONTENT TYPES
   app.get('/api/types', async (c) => {
     await ContentTypeEntity.ensureSeed(c.env);
     const page = await ContentTypeEntity.list(c.env, c.req.query('cursor') ?? null);
@@ -40,7 +34,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.post('/api/types', async (c) => {
     const user = getAuthUser(c);
     const body = await c.req.json();
-    const type = { ...body, id: body.id || body.slug, updatedAt: Date.now() };
+    const type: ContentType = { ...body, id: body.id || body.slug, updatedAt: Date.now() };
     await ContentTypeEntity.create(c.env, type);
     await AuditLogEntity.log(c.env, {
       itemId: type.id, userId: user.id, userName: user.name,
@@ -61,7 +55,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     }
     return notFound(c, 'Type not found');
   });
-  // CONTENT ITEMS
   app.get('/api/content/:typeId', async (c) => {
     const typeId = c.req.param('typeId');
     const page = await ContentItemEntity.listByType(c.env, typeId, c.req.query('cursor'), c.req.query('limit') ? Number(c.req.query('limit')) : 20);
@@ -101,14 +94,23 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     }
     return notFound(c, 'Item not found');
   });
-  // MEDIA & SEARCH (OMITTED REDUNDANT FOR SPACE - SAME AUDIT PATTERN APPLIED)
   app.get('/api/media', async (c) => ok(c, await MediaEntity.list(c.env, c.req.query('cursor'))));
   app.post('/api/media', async (c) => {
     const user = getAuthUser(c);
     const body = await c.req.json();
-    const asset = { id: crypto.randomUUID(), name: body.name || "untitled", url: body.url || `https://picsum.photos/seed/${Math.random()}/800/600`, type: body.type || "image/jpeg", size: 1024, createdAt: Date.now() };
+    const asset = { 
+      id: crypto.randomUUID(), 
+      name: body.name || "untitled", 
+      url: body.url || `https://picsum.photos/seed/${Math.random()}/800/600`, 
+      type: body.type || "image/jpeg", 
+      size: 1024, 
+      createdAt: Date.now() 
+    };
     await MediaEntity.create(c.env, asset);
-    await AuditLogEntity.log(c.env, { itemId: asset.id, userId: user.id, userName: user.name, action: 'create', entityType: 'media', timestamp: Date.now() });
+    await AuditLogEntity.log(c.env, { 
+      itemId: asset.id, userId: user.id, userName: user.name, 
+      action: 'create', entityType: 'media', timestamp: Date.now() 
+    });
     return ok(c, asset);
   });
 }

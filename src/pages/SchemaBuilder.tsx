@@ -3,12 +3,12 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Database, Trash2, GripVertical, Settings2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import type { ContentType, FieldDefinition, FieldType } from "@/types/schema";
+import type { ContentType, FieldDefinition, FieldType } from "@shared/types";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -141,13 +141,10 @@ export function SchemaBuilder() {
     });
   };
   const handleDeleteModel = () => {
-    setEditingType(prev => {
-      if (!prev?.id) return prev;
-      if (confirm(`Purge "${prev.name}" model? All associated data will become orphaned.`)) {
-        deleteMutation.mutate(prev.id);
-      }
-      return prev;
-    });
+    if (!editingType?.id) return;
+    if (confirm(`Purge "${editingType.name}" model? All associated data will become orphaned.`)) {
+      deleteMutation.mutate(editingType.id);
+    }
   };
   if (isLoading) return <AppLayout title="Schema Architect"><div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-primary" /></div></AppLayout>;
   return (

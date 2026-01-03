@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit2, FileText, Database, Trash2, Loader2 } from "lucide-react";
-import type { ContentType, ContentItem } from "@/types/schema";
+import type { ContentType, ContentItem } from "@shared/types";
 import { format } from "date-fns";
 import { toast } from "sonner";
 export function ContentMatrix() {
@@ -114,9 +114,9 @@ export function ContentMatrix() {
                       <Button variant="ghost" size="icon" className="hover:bg-primary hover:text-primary-foreground">
                         <Edit2 className="size-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="hover:bg-destructive hover:text-destructive-foreground"
                         disabled={deleteMutation.isPending && deleteMutation.variables === item.id}
                         onClick={(e) => handleDelete(e, item.id)}

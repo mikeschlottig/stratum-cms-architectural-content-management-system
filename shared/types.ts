@@ -15,6 +15,32 @@ export interface AuthResponse {
   user: User;
   token: string;
 }
+export type FieldType = 'text' | 'rich-text' | 'number' | 'boolean' | 'date' | 'media' | 'reference';
+export interface FieldDefinition {
+  id: string;
+  type: FieldType;
+  label: string;
+  slug: string;
+  required: boolean;
+  placeholder?: string;
+  description?: string;
+}
+export interface ContentType {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  fields: FieldDefinition[];
+  updatedAt: number;
+}
+export interface ContentItem {
+  id: string;
+  typeId: string;
+  data: Record<string, any>;
+  status: 'draft' | 'published' | 'archived';
+  createdAt: number;
+  updatedAt: number;
+}
 export interface AuditLog {
   id: string;
   itemId: string;
@@ -25,7 +51,6 @@ export interface AuditLog {
   timestamp: number;
   details?: string;
 }
-// Minimal real-world chat example types (shared by frontend and worker)
 export interface Chat {
   id: string;
   title: string;
@@ -35,5 +60,5 @@ export interface ChatMessage {
   chatId: string;
   userId: string;
   text: string;
-  ts: number; // epoch millis
+  ts: number;
 }

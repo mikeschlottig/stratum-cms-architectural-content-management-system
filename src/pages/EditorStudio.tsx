@@ -11,10 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Save, Loader2, FileText, AlertCircle } from "lucide-react";
+import { ChevronLeft, Save, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import type { ContentType, ContentItem, AuditLog } from "@/types/schema";
+import type { ContentType, ContentItem, AuditLog } from "@shared/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -204,7 +204,7 @@ export function EditorStudio() {
                             <div className="absolute left-6 top-10 bottom-0 w-0.5 bg-border" />
                           )}
                           <Avatar className="size-12 border-2 border-background ring-2 ring-secondary shrink-0">
-                            <AvatarFallback className="bg-orange-600 text-white font-black">{log.userName[0]}</AvatarFallback>
+                            <AvatarFallback className="bg-orange-600 text-white font-black">{log.userName?.[0] || 'U'}</AvatarFallback>
                           </Avatar>
                           <div className="space-y-1">
                             <div className="flex items-center gap-3">
@@ -219,7 +219,7 @@ export function EditorStudio() {
                             <p className="text-xs text-muted-foreground font-semibold">
                               {log.details || `Performed ${log.action} action on this record.`}
                             </p>
-                            <p className="text-[10px] text-zinc-400 font-bold uppercase">{format(log.timestamp, 'MMM dd, yyyy ��� HH:mm')}</p>
+                            <p className="text-[10px] text-zinc-400 font-bold uppercase">{format(log.timestamp, 'MMM dd, yyyy • HH:mm')}</p>
                           </div>
                         </div>
                       ))}
@@ -265,15 +265,6 @@ export function EditorStudio() {
                     <span className="text-foreground">{existingItem ? format(existingItem.createdAt, 'MMM dd, yyyy') : 'NEW'}</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-            <Card className="border-2 border-orange-500/20 bg-orange-500/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">System Trace</CardTitle>
-              </CardHeader>
-              <CardContent className="font-mono text-[10px] break-all text-muted-foreground leading-relaxed">
-                ID: {id || 'PENDING_GENERATION'}<br/>
-                ENGINE_VERSION: 1.4.0_CONTRAST_REF
               </CardContent>
             </Card>
           </div>

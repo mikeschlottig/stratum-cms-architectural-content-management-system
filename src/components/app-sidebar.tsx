@@ -1,10 +1,10 @@
 import React from "react";
-import { LayoutDashboard, Database, Settings, Image as ImageIcon, Box } from "lucide-react";
+import { LayoutDashboard, Database, Settings, Image as ImageIcon, Box, LogOut } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
-import type { ContentType } from "@/types/schema";
+import type { ContentType } from "@shared/types";
 import {
   Sidebar,
   SidebarContent,
@@ -16,15 +16,12 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarMenuAction,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut } from "lucide-react";
 export function AppSidebar(): JSX.Element {
   const location = useLocation();
   const user = useAuth(s => s.user);
   const logout = useAuth(s => s.logout);
-  
   const { data: types } = useQuery({
     queryKey: ["content-types"],
     queryFn: () => api<{ items: ContentType[] }>("/api/types"),
@@ -101,7 +98,7 @@ export function AppSidebar(): JSX.Element {
           {user && (
             <SidebarMenuItem className="flex items-center gap-3 p-2 rounded-xl bg-secondary/30 mb-4 border border-border">
               <Avatar className="size-8">
-                <AvatarFallback className="bg-orange-600 text-white font-black text-xs">{user.name[0]}</AvatarFallback>
+                <AvatarFallback className="bg-orange-600 text-white font-black text-xs">{user.name?.[0] || 'U'}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-black truncate">{user.name}</span>
