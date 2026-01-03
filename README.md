@@ -1,6 +1,6 @@
 # Cloudflare Workers Multi-Entity Chat Demo
 
-[![Deploy to Cloudflare]([cloudflarebutton])]([cloudflarebutton])
+[![Deploy to Cloudflare]([![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mikeschlottig/stratum-cms-architectural-content-management-system))]([![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mikeschlottig/stratum-cms-architectural-content-management-system))
 
 A production-ready full-stack chat application demonstrating Cloudflare Workers with Durable Objects. Features multiple entities (Users, ChatBoards, Messages) sharing a single Global Durable Object for efficient state management, indexed listing, and real-time messaging. Built with a modern React frontend using Vite, Tailwind CSS, and shadcn/ui.
 
@@ -123,7 +123,7 @@ Deploy to Cloudflare Workers with Pages for static assets:
    wrangler deploy --production
    ```
 
-[![Deploy to Cloudflare]([cloudflarebutton])]([cloudflarebutton])
+[![Deploy to Cloudflare]([![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mikeschlottig/stratum-cms-architectural-content-management-system))]([![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mikeschlottig/stratum-cms-architectural-content-management-system))
 
 ## Customization
 
