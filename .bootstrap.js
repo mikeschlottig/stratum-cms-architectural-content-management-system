@@ -79,7 +79,8 @@ function updateWranglerJsonc() {
 function runSetupCommands() {
     const commands = [
     "bun add @dnd-kit/utilities@^3.2.1",
-    "bun add @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities"
+    "bun add @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities",
+    "bun add @radix-ui/react-avatar"
 ];
     
     if (commands.length === 0) {
