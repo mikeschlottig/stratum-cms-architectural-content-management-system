@@ -1,5 +1,5 @@
 import { IndexedEntity, Entity, Env, Index } from "./core-utils";
-import type { ContentType, ContentItem } from "../src/types/schema";
+import type { ContentType, ContentItem, User, AuditLog } from "../shared/types";
 export interface MediaAsset {
   id: string;
   name: string;
@@ -14,16 +14,41 @@ export interface SearchRecord {
   title: string;
   content: string;
 }
+export class UserEntity extends IndexedEntity<User & { passwordHash: string }> {
+  static readonly entityName = "cms-user";
+  static readonly indexName = "cms-users";
+  static readonly initialState = { id: "", email: "", name: "", role: 'viewer' as const, passwordHash: "" };
+}
+export class AuditLogEntity extends IndexedEntity<AuditLog> {
+  static readonly entityName = "cms-audit";
+  static readonly indexName = "cms-audits-all";
+  static readonly initialState: AuditLog = {
+    id: "",
+    itemId: "",
+    userId: "",
+    userName: "",
+    action: 'update',
+    entityType: "",
+    timestamp: 0
+  };
+  static async log(env: Env, log: Omit<AuditLog, "id">): Promise<void> {
+    const id = crypto.randomUUID();
+    const entry = { ...log, id };
+    await new this(env, id).save(entry);
+    await new Index(env, this.indexName).add(id);
+    await new Index(env, `cms-audit-item:${log.itemId}`).add(id);
+  }
+  static async listByItem(env: Env, itemId: string): Promise<AuditLog[]> {
+    const idx = new Index<string>(env, `cms-audit-item:${itemId}`);
+    const ids = await idx.list();
+    const logs = await Promise.all(ids.map(id => new this(env, id).getState()));
+    return logs.sort((a, b) => b.timestamp - a.timestamp);
+  }
+}
 export class ContentTypeEntity extends IndexedEntity<ContentType> {
   static readonly entityName = "cms-type";
   static readonly indexName = "cms-types";
-  static readonly initialState: ContentType = {
-    id: "",
-    name: "",
-    slug: "",
-    fields: [],
-    updatedAt: 0
-  };
+  static readonly initialState: ContentType = { id: "", name: "", slug: "", fields: [], updatedAt: 0 };
   static seedData: ContentType[] = [
     {
       id: "blog-post",
@@ -42,28 +67,15 @@ export class ContentTypeEntity extends IndexedEntity<ContentType> {
 export class ContentItemEntity extends IndexedEntity<ContentItem> {
   static readonly entityName = "cms-item";
   static readonly indexName = "cms-items-all";
-  static readonly initialState: ContentItem = {
-    id: "",
-    typeId: "",
-    data: {},
-    status: 'draft',
-    createdAt: 0,
-    updatedAt: 0
-  };
+  static readonly initialState: ContentItem = { id: "", typeId: "", data: {}, status: 'draft', createdAt: 0, updatedAt: 0 };
   static async createForItem(env: Env, item: ContentItem): Promise<ContentItem> {
     await new this(env, item.id).save(item);
     await new Index(env, this.indexName).add(item.id);
     await new Index(env, `cms-type-items:${item.typeId}`).add(item.id);
-    // Update Search Index
     const searchIdx = new Index<string>(env, "cms-search-index");
     const searchableString = Object.values(item.data).join(" ").toLowerCase();
     const titleField = Object.values(item.data)[0] || "Untitled";
-    const searchRecord: SearchRecord = {
-      id: item.id,
-      typeId: item.typeId,
-      title: String(titleField),
-      content: searchableString
-    };
+    const searchRecord = { id: item.id, typeId: item.typeId, title: String(titleField), content: searchableString };
     await new SearchRecordEntity(env, item.id).save(searchRecord);
     await searchIdx.add(item.id);
     return item;
@@ -72,11 +84,9 @@ export class ContentItemEntity extends IndexedEntity<ContentItem> {
     const itemEntity = new this(env, id);
     const state = await itemEntity.getState();
     if (!state.id) return false;
-    // Remove from indices
     await new Index(env, this.indexName).remove(id);
     await new Index(env, `cms-type-items:${state.typeId}`).remove(id);
     await new Index(env, "cms-search-index").remove(id);
-    // Cleanup search metadata and item
     await new SearchRecordEntity(env, id).delete();
     return await itemEntity.delete();
   }
@@ -90,14 +100,7 @@ export class ContentItemEntity extends IndexedEntity<ContentItem> {
 export class MediaEntity extends IndexedEntity<MediaAsset> {
   static readonly entityName = "cms-media";
   static readonly indexName = "cms-assets";
-  static readonly initialState: MediaAsset = {
-    id: "",
-    name: "",
-    url: "",
-    type: "",
-    size: 0,
-    createdAt: 0
-  };
+  static readonly initialState: MediaAsset = { id: "", name: "", url: "", type: "", size: 0, createdAt: 0 };
   static async deleteAsset(env: Env, id: string): Promise<boolean> {
     await new Index(env, this.indexName).remove(id);
     return await new this(env, id).delete();
@@ -105,5 +108,5 @@ export class MediaEntity extends IndexedEntity<MediaAsset> {
 }
 export class SearchRecordEntity extends Entity<SearchRecord> {
   static readonly entityName = "cms-search-record";
-  static readonly initialState: SearchRecord = { id: "", typeId: "", title: "", content: "" };
+  static readonly initialState = { id: "", typeId: "", title: "", content: "" };
 }

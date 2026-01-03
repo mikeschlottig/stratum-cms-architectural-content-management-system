@@ -10,6 +10,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
+import { AuthGuard } from '@/components/AuthGuard';
 import '@/index.css'
 import { HomePage } from '@/pages/HomePage'
 import { SchemaBuilder } from '@/pages/SchemaBuilder'
@@ -17,41 +18,47 @@ import { ContentMatrix } from '@/pages/ContentMatrix'
 import { EditorStudio } from '@/pages/EditorStudio'
 import { MediaLibrary } from '@/pages/MediaLibrary'
 import { Settings } from '@/pages/Settings'
+import { LoginPage } from '@/pages/LoginPage'
 const queryClient = new QueryClient();
 const router = createBrowserRouter([
   {
+    path: "/login",
+    element: <LoginPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
     path: "/",
-    element: <HomePage />,
+    element: <AuthGuard><HomePage /></AuthGuard>,
     errorElement: <RouteErrorBoundary />,
   },
   {
     path: "/schema",
-    element: <SchemaBuilder />,
+    element: <AuthGuard><SchemaBuilder /></AuthGuard>,
     errorElement: <RouteErrorBoundary />,
   },
   {
     path: "/content/:typeId",
-    element: <ContentMatrix />,
+    element: <AuthGuard><ContentMatrix /></AuthGuard>,
     errorElement: <RouteErrorBoundary />,
   },
   {
     path: "/content/:typeId/new",
-    element: <EditorStudio />,
+    element: <AuthGuard><EditorStudio /></AuthGuard>,
     errorElement: <RouteErrorBoundary />,
   },
   {
     path: "/content/:typeId/edit/:id",
-    element: <EditorStudio />,
+    element: <AuthGuard><EditorStudio /></AuthGuard>,
     errorElement: <RouteErrorBoundary />,
   },
   {
     path: "/media",
-    element: <MediaLibrary />,
+    element: <AuthGuard><MediaLibrary /></AuthGuard>,
     errorElement: <RouteErrorBoundary />,
   },
   {
     path: "/settings",
-    element: <Settings />,
+    element: <AuthGuard><Settings /></AuthGuard>,
     errorElement: <RouteErrorBoundary />,
   },
 ]);

@@ -14,8 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronLeft, Save, Loader2, FileText, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import type { ContentType, ContentItem } from "@/types/schema";
+import type { ContentType, ContentItem, AuditLog } from "@/types/schema";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 export function EditorStudio() {
   const { typeId, id } = useParams<{ typeId: string; id?: string }>();
   const navigate = useNavigate();
@@ -29,6 +31,11 @@ export function EditorStudio() {
   const { data: existingItem, isLoading: itemLoading } = useQuery({
     queryKey: ["content-item", id],
     queryFn: () => api<ContentItem>(`/api/content/${typeId}/${id}`),
+    enabled: isEditing,
+  });
+  const { data: auditLogs } = useQuery({
+    queryKey: ["audit-logs", id],
+    queryFn: () => api<{ items: AuditLog[] }>(`/api/audit/${id}`),
     enabled: isEditing,
   });
   const form = useForm({
@@ -111,8 +118,14 @@ export function EditorStudio() {
             </Button>
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          <div className="lg:col-span-2 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+          <div className="lg:col-span-3 space-y-8">
+            <Tabs defaultValue="fields" className="w-full">
+              <TabsList className="bg-secondary p-1 h-12 mb-6">
+                <TabsTrigger value="fields" className="px-8 font-black uppercase tracking-widest text-xs">Content Fields</TabsTrigger>
+                <TabsTrigger value="activity" className="px-8 font-black uppercase tracking-widest text-xs">Activity Timeline</TabsTrigger>
+              </TabsList>
+              <TabsContent value="fields">
             <Card className="border-2 border-border bg-card shadow-soft">
               <CardHeader className="border-b">
                 <CardTitle className="text-xl font-black">Content Fields</CardTitle>
@@ -180,6 +193,42 @@ export function EditorStudio() {
                 ))}
               </CardContent>
             </Card>
+              </TabsContent>
+              <TabsContent value="activity">
+                <Card className="border-2 border-border bg-card shadow-soft">
+                  <CardContent className="p-8">
+                    <div className="space-y-8">
+                      {auditLogs?.items?.map((log, i) => (
+                        <div key={log.id} className="relative flex gap-6 pb-8 last:pb-0">
+                          {i !== (auditLogs.items.length - 1) && (
+                            <div className="absolute left-6 top-10 bottom-0 w-0.5 bg-border" />
+                          )}
+                          <Avatar className="size-12 border-2 border-background ring-2 ring-secondary shrink-0">
+                            <AvatarFallback className="bg-orange-600 text-white font-black">{log.userName[0]}</AvatarFallback>
+                          </Avatar>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-3">
+                              <span className="font-black text-sm">{log.userName}</span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-widest ${
+                                log.action === 'create' ? 'bg-emerald-500/10 text-emerald-600' :
+                                log.action === 'delete' ? 'bg-rose-500/10 text-rose-600' : 'bg-blue-500/10 text-blue-600'
+                              }`}>
+                                {log.action}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground font-semibold">
+                              {log.details || `Performed ${log.action} action on this record.`}
+                            </p>
+                            <p className="text-[10px] text-zinc-400 font-bold uppercase">{format(log.timestamp, 'MMM dd, yyyy ��� HH:mm')}</p>
+                          </div>
+                        </div>
+                      ))}
+                      {(!auditLogs?.items || auditLogs.items.length === 0) && <p className="text-center py-10 text-muted-foreground italic">No trace recorded for this item.</p>}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
           <div className="space-y-8">
             <Card className="border-2 border-border bg-card shadow-soft">
