@@ -24,6 +24,8 @@ export interface FieldDefinition {
   required: boolean;
   placeholder?: string;
   description?: string;
+  localized?: boolean;
+  targetTypeId?: string; // For 'reference' type
 }
 export interface ContentType {
   id: string;
@@ -36,10 +38,16 @@ export interface ContentType {
 export interface ContentItem {
   id: string;
   typeId: string;
-  data: Record<string, any>;
+  data: Record<string, any>; // Values can be primitive or Record<locale, value> if localized
   status: 'draft' | 'published' | 'archived';
   createdAt: number;
   updatedAt: number;
+}
+export interface SearchRecord {
+  id: string;
+  typeId: string;
+  title: string;
+  content: string;
 }
 export interface AuditLog {
   id: string;

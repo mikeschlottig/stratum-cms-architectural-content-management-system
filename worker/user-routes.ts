@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { jwt, sign } from "hono/jwt";
 import type { Env } from './core-utils';
-import { ok, bad, notFound } from './core-utils';
-import { ContentTypeEntity, ContentItemEntity, MediaEntity, UserEntity, AuditLogEntity } from "./cms-entities";
+import { ok, bad, notFound, Index } from './core-utils';
+import { ContentTypeEntity, ContentItemEntity, MediaEntity, UserEntity, AuditLogEntity, SearchRecordEntity } from "./cms-entities";
 import type { ContentItem, User, ContentType } from "../shared/types";
 const JWT_SECRET = "stratum-core-secret-2025";
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
@@ -22,6 +22,17 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return authHandler(c, next);
   });
   const getAuthUser = (c: any): User => c.get('jwtPayload') as User;
+  app.get('/api/search', async (c) => {
+    const q = c.req.query('q')?.toLowerCase() || "";
+    const idx = new Index<string>(c.env, "cms-search-index");
+    const ids = await idx.list();
+    const records = await Promise.all(ids.map(id => new SearchRecordEntity(c.env, id).getState()));
+    const filtered = records.filter(r => 
+      r.title.toLowerCase().includes(q) || 
+      r.content.toLowerCase().includes(q)
+    ).slice(0, 10);
+    return ok(c, { items: filtered });
+  });
   app.get('/api/audit/:itemId', async (c) => {
     const logs = await AuditLogEntity.listByItem(c.env, c.req.param('itemId'));
     return ok(c, { items: logs });
@@ -30,6 +41,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     await ContentTypeEntity.ensureSeed(c.env);
     const page = await ContentTypeEntity.list(c.env, c.req.query('cursor') ?? null);
     return ok(c, page);
+  });
+  app.get('/api/types/:id', async (c) => {
+    const id = c.req.param('id');
+    const type = await new ContentTypeEntity(c.env, id).getState();
+    if (!type.id) return notFound(c, 'Type not found');
+    return ok(c, type);
   });
   app.post('/api/types', async (c) => {
     const user = getAuthUser(c);
@@ -59,6 +76,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const typeId = c.req.param('typeId');
     const page = await ContentItemEntity.listByType(c.env, typeId, c.req.query('cursor'), c.req.query('limit') ? Number(c.req.query('limit')) : 20);
     return ok(c, page);
+  });
+  app.get('/api/content/:typeId/:id', async (c) => {
+    const id = c.req.param('id');
+    const item = await new ContentItemEntity(c.env, id).getState();
+    if (!item.id) return notFound(c, 'Item not found');
+    return ok(c, item);
   });
   app.post('/api/content/:typeId', async (c) => {
     const user = getAuthUser(c);
@@ -98,19 +121,24 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.post('/api/media', async (c) => {
     const user = getAuthUser(c);
     const body = await c.req.json();
-    const asset = { 
-      id: crypto.randomUUID(), 
-      name: body.name || "untitled", 
-      url: body.url || `https://picsum.photos/seed/${Math.random()}/800/600`, 
-      type: body.type || "image/jpeg", 
-      size: 1024, 
-      createdAt: Date.now() 
+    const asset = {
+      id: crypto.randomUUID(),
+      name: body.name || "untitled",
+      url: body.url || `https://picsum.photos/seed/${Math.random()}/800/600`,
+      type: body.type || "image/jpeg",
+      size: 1024,
+      createdAt: Date.now()
     };
     await MediaEntity.create(c.env, asset);
-    await AuditLogEntity.log(c.env, { 
-      itemId: asset.id, userId: user.id, userName: user.name, 
-      action: 'create', entityType: 'media', timestamp: Date.now() 
+    await AuditLogEntity.log(c.env, {
+      itemId: asset.id, userId: user.id, userName: user.name,
+      action: 'create', entityType: 'media', timestamp: Date.now()
     });
     return ok(c, asset);
+  });
+  app.delete('/api/media/:id', async (c) => {
+    const id = c.req.param('id');
+    const success = await MediaEntity.deleteAsset(c.env, id);
+    return success ? ok(c, { id }) : notFound(c);
   });
 }

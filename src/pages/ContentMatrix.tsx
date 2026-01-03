@@ -6,7 +6,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit2, FileText, Database, Trash2, Loader2 } from "lucide-react";
+import { Plus, Edit2, FileText, Database, Trash2, Loader2, Globe, Link2 } from "lucide-react";
 import type { ContentType, ContentItem } from "@shared/types";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -28,104 +28,89 @@ export function ContentMatrix() {
     mutationFn: (id: string) => api(`/api/content/${typeId}/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["content-items", typeId] });
-      toast.success("Entry purged from matrix");
+      toast.success("Entry purged from core");
     },
-    onError: (err: any) => toast.error(`Deletion failed: ${err.message}`),
   });
-  const handleDelete = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (confirm("Permanently delete this entry?")) {
-      deleteMutation.mutate(id);
+  const renderCellContent = (item: ContentItem, field: any) => {
+    let value = item.data[field.slug];
+    if (field.localized && value && typeof value === 'object') {
+      value = value['en'] || Object.values(value)[0];
     }
+    if (field.type === 'reference') {
+      return (
+        <div className="flex items-center gap-1.5 font-mono text-[10px] text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full w-fit">
+          <Link2 className="size-3" /> {value || 'null'}
+        </div>
+      );
+    }
+    if (field.type === 'boolean') {
+      return value ? <Badge className="bg-emerald-500 text-[9px] font-black uppercase">True</Badge> : <Badge variant="outline" className="text-[9px] font-black uppercase">False</Badge>;
+    }
+    return String(value || '���').slice(0, 50);
   };
-  if (schemaLoading || itemsLoading) {
-    return (
-      <AppLayout title="Loading Matrix...">
-        <div className="flex items-center justify-center h-64">
-          <Database className="animate-spin size-8 text-primary" />
-        </div>
-      </AppLayout>
-    );
-  }
-  if (!schema) {
-    return (
-      <AppLayout title="Error">
-        <div className="text-center py-20">
-          <h2 className="text-3xl font-black">Model Not Found</h2>
-          <p className="text-muted-foreground mt-2 font-medium">The content model you are looking for does not exist.</p>
-          <Button asChild className="mt-8" variant="default">
-            <Link to="/schema">Create Model</Link>
-          </Button>
-        </div>
-      </AppLayout>
-    );
-  }
+  if (schemaLoading || itemsLoading) return <AppLayout title="Matrix Core"><Loader2 className="animate-spin" /></AppLayout>;
+  if (!schema) return <AppLayout title="Error">Model not found.</AppLayout>;
   return (
     <AppLayout title={schema.name}>
-      <div className="space-y-8">
+      <div className="space-y-8 animate-in fade-in duration-500">
         <div className="flex justify-between items-end">
           <div>
-            <h1 className="text-4xl font-black tracking-tight">{schema.name}</h1>
-            <p className="text-muted-foreground font-semibold mt-1">{schema.description || `Manage all ${schema.name} entries.`}</p>
+            <h1 className="text-5xl font-black tracking-tighter uppercase">{schema.name}</h1>
+            <p className="text-zinc-500 font-bold tracking-widest uppercase text-xs mt-1">Matrix Interface</p>
           </div>
-          <Button asChild className="btn-gradient px-8 py-6">
-            <Link to={`/content/${typeId}/new`}>
-              <Plus className="size-5 mr-2" /> New Entry
-            </Link>
+          <Button asChild className="btn-gradient px-8 py-7 h-auto font-black uppercase tracking-widest text-xs">
+            <Link to={`/content/${typeId}/new`}><Plus className="size-5 mr-2" /> New Dispatch</Link>
           </Button>
         </div>
-        <div className="rounded-xl border-2 border-border bg-card shadow-soft overflow-hidden">
+        <div className="rounded-[2rem] border-4 border-zinc-900 bg-black overflow-hidden shadow-2xl">
           <Table>
-            <TableHeader className="bg-secondary/80">
-              <TableRow className="hover:bg-transparent border-b-2 border-border">
-                <TableHead className="w-[120px] font-black text-foreground uppercase tracking-widest text-xs">Status</TableHead>
+            <TableHeader className="bg-zinc-950">
+              <TableRow className="hover:bg-transparent border-b-4 border-zinc-900">
+                <TableHead className="w-[120px] font-black text-zinc-500 uppercase tracking-[0.2em] text-[10px] py-6 px-8">Workflow</TableHead>
                 {schema.fields.slice(0, 3).map((field) => (
-                  <TableHead key={field.id} className="font-black text-foreground uppercase tracking-widest text-xs">{field.label}</TableHead>
+                  <TableHead key={field.id} className="font-black text-zinc-500 uppercase tracking-[0.2em] text-[10px] py-6 px-8">
+                    <div className="flex items-center gap-2">
+                      {field.label}
+                      {field.localized && <Globe className="size-3 text-indigo-400" />}
+                    </div>
+                  </TableHead>
                 ))}
-                <TableHead className="font-black text-foreground uppercase tracking-widest text-xs">Updated</TableHead>
-                <TableHead className="text-right font-black text-foreground uppercase tracking-widest text-xs">Actions</TableHead>
+                <TableHead className="font-black text-zinc-500 uppercase tracking-[0.2em] text-[10px] py-6 px-8">Lifecycle</TableHead>
+                <TableHead className="text-right font-black text-zinc-500 uppercase tracking-[0.2em] text-[10px] py-6 px-8">Control</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items?.items.map((item) => (
                 <TableRow
                   key={item.id}
-                  className="cursor-pointer hover:bg-muted/50 border-border group"
+                  className="cursor-pointer hover:bg-zinc-900/50 border-zinc-900 group"
                   onClick={() => navigate(`/content/${typeId}/edit/${item.id}`)}
                 >
-                  <TableCell>
-                    <Badge
-                      variant={item.status === 'published' ? 'default' : 'outline'}
-                      className={`capitalize font-black text-[10px] px-3 border-2 ${item.status === 'published' ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-border text-muted-foreground'}`}
-                    >
+                  <TableCell className="px-8 py-6">
+                    <Badge variant="outline" className={`font-black uppercase text-[9px] border-2 ${item.status === 'published' ? 'border-emerald-600 text-emerald-500' : 'border-zinc-800 text-zinc-500'}`}>
                       {item.status}
                     </Badge>
                   </TableCell>
                   {schema.fields.slice(0, 3).map((field) => (
-                    <TableCell key={field.id} className="font-bold text-sm">
-                      {item.data[field.slug]?.toString() || <span className="text-muted-foreground/40 font-normal">—</span>}
+                    <TableCell key={field.id} className="font-bold text-sm px-8 py-6">
+                      {renderCellContent(item, field)}
                     </TableCell>
                   ))}
-                  <TableCell className="text-muted-foreground font-bold text-xs">
-                    {format(item.updatedAt, 'MMM d, HH:mm')}
+                  <TableCell className="text-zinc-500 font-black uppercase text-[10px] tracking-tighter px-8 py-6">
+                    {format(item.updatedAt, 'MMM dd, HH:mm')}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="hover:bg-primary hover:text-primary-foreground">
+                  <TableCell className="text-right px-8 py-6">
+                    <div className="flex items-center justify-end gap-3">
+                      <Button variant="ghost" size="icon" className="h-10 w-10 hover:bg-white hover:text-black rounded-xl">
                         <Edit2 className="size-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="hover:bg-destructive hover:text-destructive-foreground"
-                        disabled={deleteMutation.isPending && deleteMutation.variables === item.id}
-                        onClick={(e) => handleDelete(e, item.id)}
+                        className="h-10 w-10 hover:bg-destructive hover:text-destructive-foreground rounded-xl"
+                        onClick={(e) => { e.stopPropagation(); if (confirm("Purge?")) deleteMutation.mutate(item.id); }}
                       >
-                        {deleteMutation.isPending && deleteMutation.variables === item.id ? (
-                          <Loader2 className="animate-spin size-4" />
-                        ) : (
-                          <Trash2 className="size-4" />
-                        )}
+                        <Trash2 className="size-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -135,11 +120,11 @@ export function ContentMatrix() {
                 <TableRow>
                   <TableCell colSpan={schema.fields.length + 3} className="h-80 text-center">
                     <div className="flex flex-col items-center justify-center">
-                      <FileText className="size-16 mb-4 text-muted-foreground opacity-30" />
-                      <p className="text-xl font-bold">Zero Entries Found</p>
-                      <p className="text-muted-foreground font-medium mb-6">Start populating your {schema.name} matrix.</p>
-                      <Button asChild variant="outline" className="border-2 font-bold">
-                        <Link to={`/content/${typeId}/new`}>Create First Entry</Link>
+                      <FileText className="size-16 mb-4 text-zinc-800" />
+                      <h3 className="text-2xl font-black uppercase tracking-tighter">Matrix Empty</h3>
+                      <p className="text-zinc-500 font-bold mb-6">Start populating the {schema.name} core.</p>
+                      <Button asChild variant="outline" className="border-2 font-black uppercase text-[10px] tracking-widest h-12 px-8">
+                        <Link to={`/content/${typeId}/new`}>Initialize First Entry</Link>
                       </Button>
                     </div>
                   </TableCell>

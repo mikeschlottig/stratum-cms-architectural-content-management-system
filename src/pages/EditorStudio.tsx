@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
@@ -11,19 +11,25 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Save, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, Save, Loader2, AlertCircle, Globe, Link2, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import type { ContentType, ContentItem, AuditLog } from "@shared/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+const LOCALES = [
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Spanish' },
+  { code: 'de', name: 'German' }
+];
 export function EditorStudio() {
   const { typeId, id } = useParams<{ typeId: string; id?: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEditing = !!id;
-  const { data: schema, isLoading: schemaLoading, error: schemaError } = useQuery({
+  const [activeLocale, setActiveLocale] = useState('en');
+  const { data: schema, isLoading: schemaLoading } = useQuery({
     queryKey: ["content-type", typeId],
     queryFn: () => api<ContentType>(`/api/types/${typeId}`),
     enabled: !!typeId,
@@ -46,10 +52,7 @@ export function EditorStudio() {
   });
   React.useEffect(() => {
     if (existingItem) {
-      form.reset({
-        status: existingItem.status,
-        data: existingItem.data,
-      });
+      form.reset({ status: existingItem.status, data: existingItem.data });
     }
   }, [existingItem, form]);
   const saveMutation = useMutation({
@@ -59,210 +62,158 @@ export function EditorStudio() {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["content-items", typeId] });
-      toast.success(isEditing ? "Entry Updated" : "Entry Published");
+      toast.success(isEditing ? "Matrix Entry Synced" : "New Entry Dispatched");
       navigate(`/content/${typeId}`);
     },
-    onError: (err: any) => toast.error(`Save failed: ${err.message}`),
   });
-  if (schemaLoading || (isEditing && itemLoading)) {
+  const getFieldValue = (slug: string, isLocalized?: boolean) => {
+    const data = form.watch(`data.${slug}`);
+    if (isLocalized) return data?.[activeLocale] || '';
+    return data || '';
+  };
+  const setFieldValue = (slug: string, value: any, isLocalized?: boolean) => {
+    if (isLocalized) {
+      const current = form.getValues(`data.${slug}`) || {};
+      form.setValue(`data.${slug}`, { ...current, [activeLocale]: value });
+    } else {
+      form.setValue(`data.${slug}`, value);
+    }
+  };
+  const renderField = (field: any) => {
+    const value = getFieldValue(field.slug, field.localized);
+    const onChange = (v: any) => setFieldValue(field.slug, v, field.localized);
     return (
-      <AppLayout title="Studio Loading...">
-        <div className="space-y-8">
-          <Skeleton className="h-12 w-3/4" />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <Skeleton className="lg:col-span-2 h-[500px]" />
-            <Skeleton className="h-[300px]" />
+      <div key={field.id} className="space-y-3 p-6 border-2 border-border rounded-2xl bg-zinc-950/20 group hover:border-primary/30 transition-colors">
+        <div className="flex items-center justify-between mb-2">
+          <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">
+            {field.label} {field.required && <span className="text-orange-500">*</span>}
+            {field.localized && <Globe className="size-3 text-indigo-400" />}
+            {field.type === 'reference' && <Link2 className="size-3 text-emerald-400" />}
+          </Label>
+          {field.localized && (
+            <span className="text-[10px] font-black uppercase bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded">
+              Locale: {activeLocale}
+            </span>
+          )}
+        </div>
+        {field.type === 'text' && (
+          <Input className="h-12 border-2 font-bold" value={value} onChange={e => onChange(e.target.value)} />
+        )}
+        {field.type === 'rich-text' && (
+          <Textarea className="min-h-[200px] border-2 font-bold" value={value} onChange={e => onChange(e.target.value)} />
+        )}
+        {field.type === 'number' && (
+          <Input type="number" className="h-12 border-2 font-bold" value={value} onChange={e => onChange(e.target.valueAsNumber)} />
+        )}
+        {field.type === 'boolean' && (
+          <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl">
+            <span className="text-xs font-black uppercase">{value ? 'ENABLED' : 'DISABLED'}</span>
+            <Switch checked={!!value} onCheckedChange={onChange} className="data-[state=checked]:bg-orange-600" />
           </div>
-        </div>
-      </AppLayout>
+        )}
+        {field.type === 'reference' && (
+          <div className="space-y-4">
+            <Input className="h-12 border-2 font-mono text-xs uppercase" placeholder="TARGET_OBJECT_ID" value={value} onChange={e => onChange(e.target.value)} />
+            <p className="text-[10px] font-black text-emerald-500/80 uppercase tracking-tighter">Linking to: {field.targetTypeId}</p>
+          </div>
+        )}
+        {field.type === 'media' && (
+          <Input className="h-12 border-2 font-bold" placeholder="PASTE_ASSET_URL" value={value} onChange={e => onChange(e.target.value)} />
+        )}
+      </div>
     );
-  }
-  if (schemaError || !schema) {
-    return (
-      <AppLayout title="Error">
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <AlertCircle className="size-16 text-destructive mb-4" />
-          <h2 className="text-3xl font-black">Editor Fault</h2>
-          <p className="text-muted-foreground font-bold mt-2">Could not retrieve content schema.</p>
-          <Button asChild className="mt-8 font-bold" variant="outline">
-            <Link to="/schema">Return to Architect</Link>
-          </Button>
-        </div>
-      </AppLayout>
-    );
-  }
+  };
+  if (schemaLoading || (isEditing && itemLoading)) return <AppLayout title="Editor Engine"><Loader2 className="animate-spin" /></AppLayout>;
+  if (!schema) return <AppLayout title="Error">Schema lost.</AppLayout>;
   return (
-    <AppLayout title={isEditing ? `Edit ${schema.name}` : `New ${schema.name}`}>
-      <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-8 animate-in fade-in duration-500">
-        <div className="flex items-center justify-between border-b pb-6">
+    <AppLayout title={isEditing ? `Refining ${schema.name}` : `Defining ${schema.name}`}>
+      <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-8 max-w-5xl mx-auto">
+        <div className="flex items-center justify-between sticky top-20 bg-background/80 backdrop-blur-xl z-20 py-4 border-b">
           <div className="flex items-center gap-6">
-            <Button variant="outline" size="icon" asChild className="border-2 rounded-xl h-12 w-12">
-              <Link to={`/content/${typeId}`}>
-                <ChevronLeft className="size-6" />
-              </Link>
+            <Button variant="outline" size="icon" asChild className="h-10 w-10 border-2">
+              <Link to={`/content/${typeId}`}><ChevronLeft className="size-5" /></Link>
             </Button>
-            <div>
-              <h1 className="text-3xl font-black tracking-tight">
-                {isEditing ? `Edit Entry` : `Create Entry`}
-              </h1>
-              <p className="text-sm font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest">{schema.name} model</p>
+            <div className="flex items-center gap-4">
+              {LOCALES.map(loc => (
+                <Button
+                  key={loc.code}
+                  type="button"
+                  variant={activeLocale === loc.code ? 'default' : 'ghost'}
+                  className="h-8 px-4 font-black uppercase text-[10px] tracking-widest"
+                  onClick={() => setActiveLocale(loc.code)}
+                >
+                  {loc.code}
+                </Button>
+              ))}
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" type="button" onClick={() => navigate(`/content/${typeId}`)} className="font-bold">
-              Discard Changes
-            </Button>
-            <Button className="btn-gradient px-8 py-6 h-auto" type="submit" disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? <Loader2 className="animate-spin mr-2 size-5" /> : <Save className="mr-2 size-5" />}
-              {isEditing ? 'Sync Changes' : 'Publish Entry'}
+          <div className="flex gap-4">
+            <Button variant="ghost" type="button" onClick={() => navigate(`/content/${typeId}`)} className="font-bold uppercase text-[10px] tracking-widest">Discard</Button>
+            <Button className="btn-gradient px-8 py-5 h-auto font-black uppercase tracking-widest text-xs" type="submit" disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
+              Dispatch Entry
             </Button>
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
-          <div className="lg:col-span-3 space-y-8">
-            <Tabs defaultValue="fields" className="w-full">
-              <TabsList className="bg-secondary p-1 h-12 mb-6">
-                <TabsTrigger value="fields" className="px-8 font-black uppercase tracking-widest text-xs">Content Fields</TabsTrigger>
-                <TabsTrigger value="activity" className="px-8 font-black uppercase tracking-widest text-xs">Activity Timeline</TabsTrigger>
+          <div className="lg:col-span-3">
+            <Tabs defaultValue="content">
+              <TabsList className="bg-secondary p-1 h-12 mb-8 rounded-xl">
+                <TabsTrigger value="content" className="flex-1 font-black uppercase tracking-widest text-[10px]">Data Matrix</TabsTrigger>
+                <TabsTrigger value="audit" className="flex-1 font-black uppercase tracking-widest text-[10px]">Log History</TabsTrigger>
               </TabsList>
-              <TabsContent value="fields">
-            <Card className="border-2 border-border bg-card shadow-soft">
-              <CardHeader className="border-b">
-                <CardTitle className="text-xl font-black">Content Fields</CardTitle>
-                <CardDescription className="text-muted-foreground font-semibold">Structured data for this {schema.name}.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-8 space-y-8">
-                {schema.fields.map((field) => (
-                  <div key={field.id} className="space-y-3">
-                    <Label className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-1">
-                      {field.label}
-                      {field.required && <span className="text-destructive font-bold text-lg">*</span>}
-                    </Label>
-                    {field.type === 'text' && (
-                      <Input
-                        className="h-12 border-2 bg-background font-medium focus:ring-2 focus:ring-orange-500/20"
-                        placeholder={field.placeholder || `Enter value...`}
-                        {...form.register(`data.${field.slug}`, { required: field.required })}
-                      />
-                    )}
-                    {field.type === 'rich-text' && (
-                      <Textarea
-                        className="border-2 bg-background font-medium min-h-[250px] focus:ring-2 focus:ring-orange-500/20"
-                        placeholder={field.placeholder || `Write detailed content...`}
-                        {...form.register(`data.${field.slug}`, { required: field.required })}
-                      />
-                    )}
-                    {field.type === 'number' && (
-                      <Input
-                        className="h-12 border-2 bg-background font-medium"
-                        type="number"
-                        {...form.register(`data.${field.slug}`, { required: field.required, valueAsNumber: true })}
-                      />
-                    )}
-                    {field.type === 'boolean' && (
-                      <Controller
-                        control={form.control}
-                        name={`data.${field.slug}`}
-                        render={({ field: { value, onChange } }) => (
-                          <div className="flex items-center justify-between p-4 rounded-xl border-2 bg-secondary/30">
-                            <span className="text-sm font-bold">{value ? 'ENABLED' : 'DISABLED'}</span>
-                            <Switch checked={!!value} onCheckedChange={onChange} className="data-[state=checked]:bg-orange-600" />
-                          </div>
-                        )}
-                      />
-                    )}
-                    {field.type === 'date' && (
-                      <Input
-                        className="h-12 border-2 bg-background font-medium"
-                        type="datetime-local"
-                        {...form.register(`data.${field.slug}`, { required: field.required })}
-                      />
-                    )}
-                    {field.type === 'media' && (
-                      <div className="p-6 border-2 border-dashed rounded-xl bg-secondary/20 flex flex-col gap-4">
-                        <Input
-                          className="border-2 bg-background font-bold text-xs"
-                          placeholder="PASTE MEDIA ASSET URL HERE"
-                          {...form.register(`data.${field.slug}`, { required: field.required })}
-                        />
-                        <p className="text-[10px] font-black text-muted-foreground uppercase text-center">Reference from the global asset library</p>
-                      </div>
-                    )}
-                    {field.description && <p className="text-xs font-semibold text-muted-foreground">{field.description}</p>}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+              <TabsContent value="content" className="space-y-6">
+                {schema.fields.map(renderField)}
               </TabsContent>
-              <TabsContent value="activity">
-                <Card className="border-2 border-border bg-card shadow-soft">
-                  <CardContent className="p-8">
-                    <div className="space-y-8">
-                      {auditLogs?.items?.map((log, i) => (
-                        <div key={log.id} className="relative flex gap-6 pb-8 last:pb-0">
-                          {i !== (auditLogs.items.length - 1) && (
-                            <div className="absolute left-6 top-10 bottom-0 w-0.5 bg-border" />
-                          )}
-                          <Avatar className="size-12 border-2 border-background ring-2 ring-secondary shrink-0">
-                            <AvatarFallback className="bg-orange-600 text-white font-black">{log.userName?.[0] || 'U'}</AvatarFallback>
-                          </Avatar>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-3">
-                              <span className="font-black text-sm">{log.userName}</span>
-                              <span className={`text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-widest ${
-                                log.action === 'create' ? 'bg-emerald-500/10 text-emerald-600' :
-                                log.action === 'delete' ? 'bg-rose-500/10 text-rose-600' : 'bg-blue-500/10 text-blue-600'
-                              }`}>
-                                {log.action}
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground font-semibold">
-                              {log.details || `Performed ${log.action} action on this record.`}
-                            </p>
-                            <p className="text-[10px] text-zinc-400 font-bold uppercase">{format(log.timestamp, 'MMM dd, yyyy • HH:mm')}</p>
-                          </div>
+              <TabsContent value="audit" className="space-y-6">
+                <Card className="border-2 bg-card">
+                  <CardContent className="p-8 space-y-8">
+                    {auditLogs?.items?.map((log) => (
+                      <div key={log.id} className="flex gap-4 items-start border-b border-zinc-900 pb-6 last:border-0">
+                        <Avatar className="size-10 border-2">
+                          <AvatarFallback className="bg-orange-600 font-black">{log.userName[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-1">
+                          <p className="text-sm font-black uppercase tracking-tight">{log.userName} • <span className="text-orange-500">{log.action}</span></p>
+                          <p className="text-[10px] text-zinc-500 font-bold uppercase">{format(log.timestamp, 'MMM dd, HH:mm')}</p>
                         </div>
-                      ))}
-                      {(!auditLogs?.items || auditLogs.items.length === 0) && <p className="text-center py-10 text-muted-foreground italic">No trace recorded for this item.</p>}
-                    </div>
+                      </div>
+                    ))}
                   </CardContent>
                 </Card>
               </TabsContent>
             </Tabs>
           </div>
-          <div className="space-y-8">
-            <Card className="border-2 border-border bg-card shadow-soft">
-              <CardHeader className="bg-secondary/20 border-b">
-                <CardTitle className="text-lg font-black">Publishing Hub</CardTitle>
+          <div className="lg:col-span-1">
+            <Card className="border-2 sticky top-48">
+              <CardHeader className="bg-secondary/20">
+                <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Node Status</CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
-                <div className="space-y-3">
-                  <Label className="text-xs font-black uppercase tracking-widest">Workflow State</Label>
-                  <Controller
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="h-12 border-2 font-bold bg-background">
-                          <SelectValue placeholder="Select Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="draft" className="font-bold">Draft</SelectItem>
-                          <SelectItem value="published" className="font-bold">Published</SelectItem>
-                          <SelectItem value="archived" className="font-bold text-destructive">Archived</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-                <div className="pt-6 border-t space-y-3">
-                  <div className="flex justify-between text-[11px] font-black uppercase text-muted-foreground">
-                    <span>Model ID</span>
-                    <span className="text-foreground">{typeId}</span>
+                <Controller
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="h-12 border-2 font-black uppercase tracking-widest text-[10px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft" className="font-black uppercase text-[10px]">Draft</SelectItem>
+                        <SelectItem value="published" className="font-black uppercase text-[10px]">Published</SelectItem>
+                        <SelectItem value="archived" className="font-black uppercase text-[10px] text-destructive">Archived</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <div className="pt-6 border-t border-zinc-900 space-y-4">
+                  <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                    <span>Identity</span>
+                    <span className="text-foreground truncate max-w-[100px]">{id || 'VOLATILE'}</span>
                   </div>
-                  <div className="flex justify-between text-[11px] font-black uppercase text-muted-foreground">
-                    <span>Created</span>
-                    <span className="text-foreground">{existingItem ? format(existingItem.createdAt, 'MMM dd, yyyy') : 'NEW'}</span>
+                  <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                    <span>Type</span>
+                    <span className="text-orange-500">{typeId}</span>
                   </div>
                 </div>
               </CardContent>
